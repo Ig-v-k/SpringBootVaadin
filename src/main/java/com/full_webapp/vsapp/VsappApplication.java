@@ -4,8 +4,24 @@ package com.full_webapp.vsapp;
  * A simple project for learn Vaadin with a spring
  */
 
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.Route;
+import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import java.util.List;
 
 /**
  * main
@@ -20,6 +36,25 @@ public class VsappApplication {
 /**
  * views
  */
+@Route
+class MainView extends VerticalLayout {
+  private final CustomerRepository customerRepository;
+
+  @Autowired
+  public MainView(CustomerRepository customerRepository){
+    this.customerRepository = customerRepository;
+    Grid<Customer> grid = new Grid<>(Customer.class);
+    add(grid);
+    grid.setItems(customerRepository.findAll());
+  }
+}
+
+@Route
+class SecondView extends VerticalLayout {
+  public SecondView() {
+    add(new Button("Click me", e -> Notification.show("Hello, Spring+Vaadin user!")));
+  }
+}
 //@Route(value = "app")
 //class MainView extends VerticalLayout {
 //  private final CustomUserService userService;
@@ -38,7 +73,7 @@ public class VsappApplication {
 //}
 
 /**
- * security
+ * configuration
  */
 //@Configuration
 //@EnableWebSecurity
@@ -159,6 +194,13 @@ public class VsappApplication {
 /**
  * jpa - repository
  */
+@Repository
+interface CustomerRepository extends JpaRepository<Customer, Integer> {
+  @Query("from Customer c " +
+        "where concat(c.firstName, ' ', c.lastName, ' ', c.patronymic) " +
+        "like concat('%', :name, '%')")
+  List<Customer> findByName(@Param("name") String name);
+}
 //@Repository
 //interface UserRepository extends JpaRepository<User, Integer> {
 //  User findByUserName(String userName);
@@ -211,8 +253,18 @@ public class VsappApplication {
 //}
 
 /**
- * the users
+ * pojo
  */
+@Data
+@Entity
+class Customer{
+  @Id
+  @GeneratedValue
+  private Integer id;
+  private String firstName;
+  private String lastName;
+  private String patronymic;
+}
 //@Data
 //@Entity
 //@ToString
@@ -239,17 +291,17 @@ public class VsappApplication {
 //  @ElementCollection(targetClass = Roles.class, fetch = FetchType.EAGER)
 //  @CollectionTable(name = "user_role", joinColumns = @JoinColumn(name = "user_id"))
 //  private Set<Roles> roles = new HashSet<Roles>(0);
-}
+//}
 
 /**
- * a roles for the users
+ * roles
  */
 //enum Roles implements Serializable {
 //  USER, ADMIN;
 //}
 
 /**
- * init data
+ * data initialization
  */
 //@Slf4j
 //@Component
