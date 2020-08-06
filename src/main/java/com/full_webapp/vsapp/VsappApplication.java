@@ -1,7 +1,7 @@
 package com.full_webapp.vsapp;
 
 /**
- * A simple project for learn Vaadin with a spring
+ * A simple project for learn Vaadin with the Spring
  */
 
 import com.vaadin.flow.component.button.Button;
@@ -10,7 +10,6 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import lombok.Data;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,20 +35,15 @@ public class VsappApplication {
 /**
  * views
  */
-@Route
+@Route("app")
 class MainView extends VerticalLayout {
-  private final CustomerRepository customerRepository;
-
-  @Autowired
-  public MainView(CustomerRepository customerRepository){
-    this.customerRepository = customerRepository;
-    Grid<Customer> grid = new Grid<>(Customer.class);
+  public MainView(CustomerRepository customerRepository) {
+    Grid<Usr> grid = new Grid<>(Usr.class);
     add(grid);
     grid.setItems(customerRepository.findAll());
   }
 }
-
-@Route
+@Route("any")
 class SecondView extends VerticalLayout {
   public SecondView() {
     add(new Button("Click me", e -> Notification.show("Hello, Spring+Vaadin user!")));
@@ -195,11 +189,11 @@ class SecondView extends VerticalLayout {
  * jpa - repository
  */
 @Repository
-interface CustomerRepository extends JpaRepository<Customer, Integer> {
-  @Query("from Customer c " +
+interface CustomerRepository extends JpaRepository<Usr, Integer> {
+  @Query("from Usr c " +
         "where concat(c.firstName, ' ', c.lastName, ' ', c.patronymic) " +
         "like concat('%', :name, '%')")
-  List<Customer> findByName(@Param("name") String name);
+  List<Usr> findByName(@Param("name") String name);
 }
 //@Repository
 //interface UserRepository extends JpaRepository<User, Integer> {
@@ -257,7 +251,7 @@ interface CustomerRepository extends JpaRepository<Customer, Integer> {
  */
 @Data
 @Entity
-class Customer{
+class Usr{
   @Id
   @GeneratedValue
   private Integer id;
