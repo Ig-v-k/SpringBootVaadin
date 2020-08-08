@@ -8,6 +8,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridMultiSelectionModel;
 import com.vaadin.flow.component.grid.GridSingleSelectionModel;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
@@ -17,6 +18,7 @@ import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.data.renderer.TemplateRenderer;
 import com.vaadin.flow.data.selection.MultiSelect;
 import com.vaadin.flow.data.selection.SingleSelect;
+import com.vaadin.flow.function.SerializableBiConsumer;
 import com.vaadin.flow.router.Route;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -66,6 +68,7 @@ class MainView extends VerticalLayout {
 	customGridColumnReordering();
 	customGridAddColumnTemplateRendering();
 	customGridAddColumnComponentRendering();
+	customGridAddColumnBiConsumer();
   }
 
   void customGridAddColumnsInLoop() {
@@ -84,6 +87,14 @@ class MainView extends VerticalLayout {
 	grid.addColumn(Usr::getFirstName).setHeader("First Name").setKey("firstName-key");
 	grid.addColumn(Usr::getLastName).setHeader("Last Name").setKey("lastName-key");
 	grid.addColumn(Usr::getPatronymic).setHeader("Patronymic").setKey("patronymic-key");
+  }
+
+  void customGridAddColumnBiConsumer() {
+	SerializableBiConsumer<Div, Usr> consumer =
+		  (div, person) -> div.setText(person.getPatronymic() + " consumer");
+	grid.addColumn(
+		  new ComponentRenderer<>(Div::new, consumer))
+		  .setHeader("Name");
   }
 
   void customGridAddColumnComponentRendering() {
