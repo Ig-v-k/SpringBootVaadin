@@ -73,7 +73,7 @@ class MainView extends VerticalLayout {
   }
 
   void customGridAddColumns() {
-	grid.addColumn(Usr::getId).setFlexGrow(0).setWidth("100px").setResizable(false).setKey("Id-key");
+	grid.addColumn(Usr::getId).setFlexGrow(0).setWidth("100px").setResizable(true).setKey("Id-key").setFrozen(true);
 	grid.addColumn(Usr::getFirstName).setHeader("First Name");
 	grid.addColumn(Usr::getLastName).setHeader("Last Name");
 	grid.addColumn(Usr::getPatronymic).setHeader("Patronymic");
