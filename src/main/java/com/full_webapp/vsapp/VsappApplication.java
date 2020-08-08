@@ -12,7 +12,9 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.data.renderer.TemplateRenderer;
@@ -62,6 +64,8 @@ class MainView extends VerticalLayout {
 
   void customGridMain() {
 	grid.addClassName("usr-grid");
+	grid.setWidthFull();
+	grid.setHeight("1000px");
 	grid.setItems(customerRepository.findAll());
 	customGridAddColumns();
 	customGridSelectionModeMulti();
@@ -69,6 +73,7 @@ class MainView extends VerticalLayout {
 	customGridAddColumnTemplateRendering();
 	customGridAddColumnComponentRendering();
 	customGridAddColumnBiConsumer();
+	customGridAddColumnTemplateRenderingButtons();
   }
 
   void customGridAddColumnsInLoop() {
@@ -94,7 +99,7 @@ class MainView extends VerticalLayout {
 		  (div, person) -> div.setText(person.getPatronymic() + " consumer");
 	grid.addColumn(
 		  new ComponentRenderer<>(Div::new, consumer))
-		  .setHeader("Name");
+		  .setHeader("DivBiConsumer");
   }
 
   void customGridAddColumnComponentRendering() {
@@ -106,6 +111,9 @@ class MainView extends VerticalLayout {
 		return new Icon(VaadinIcon.FEMALE);
 	  }
 	})).setHeader("Gender");
+	grid.addColumn(
+		  new ComponentRenderer<>(
+				() -> new Icon(VaadinIcon.ARROW_LEFT)));
   }
 
   void customGridAddColumnTemplateRendering() {
@@ -124,6 +132,26 @@ class MainView extends VerticalLayout {
 		  })
 	)
 		  .setHeader("Actions");
+  }
+
+  void customGridAddColumnTemplateRenderingButtons() {
+	grid.addColumn(new ComponentRenderer<>(person -> {
+	  TextField name = new TextField("Name_b");
+	  Usr usr = customerRepository.findById(1).get();
+	  name.setValue(usr.getFirstName() + "_b");
+	  Button update = new Button("Update", event -> {
+		usr.setFirstName(usr.getFirstName() + "_bb");
+		customerRepository.save(usr);
+		grid.getDataProvider().refreshItem(usr);
+	  });
+	  Button remove = new Button("Remove", event -> {
+		ListDataProvider<Usr> dataProvider = (ListDataProvider<Usr>) grid.getDataProvider();
+		dataProvider.getItems().remove(usr);
+		dataProvider.refreshAll();
+	  });
+	  HorizontalLayout buttons = new HorizontalLayout(update, remove);
+	  return new VerticalLayout(name, buttons);
+	})).setHeader("Actions");
   }
 
   void customGridSelectionModeNone() {
