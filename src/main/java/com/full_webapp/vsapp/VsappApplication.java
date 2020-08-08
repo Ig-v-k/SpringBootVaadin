@@ -73,7 +73,7 @@ class MainView extends VerticalLayout {
   }
 
   void customGridSelectionMode() {
-    grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+	grid.setSelectionMode(Grid.SelectionMode.SINGLE);
 	grid.addSelectionListener(selectionEvent -> {
 	  selectionEvent.getFirstSelectedItem().ifPresent(user -> {
 		Notification.show(user.getFirstName() + " is selected");
@@ -82,7 +82,7 @@ class MainView extends VerticalLayout {
   }
 
   void customGridSelectionModeSingleSelect() {
-    grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+	grid.setSelectionMode(Grid.SelectionMode.SINGLE);
 	SingleSelect<Grid<Usr>, Usr> personSelect = grid.asSingleSelect();
 	personSelect.addValueChangeListener(e -> {
 	  Usr selectedPerson = e.getValue();
@@ -95,6 +95,10 @@ class MainView extends VerticalLayout {
 	multiSelect.addValueChangeListener(e -> {
 	  Set<Usr> selectedPersons = e.getValue();
 	});
+	grid.addSelectionListener(selectionEvent -> {
+		  Set<Usr> selected = selectionEvent.getAllSelectedItems();
+		  Notification.show(selected.size() + " items selected");
+  	});
   }
 }
 
@@ -123,6 +127,8 @@ class SecondView extends VerticalLayout {
 
 /**
  * configuration
+ * <p>
+ * service
  * <p>
  * service
  * <p>
