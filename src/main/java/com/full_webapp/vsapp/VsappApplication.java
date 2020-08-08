@@ -57,7 +57,7 @@ class MainView extends VerticalLayout {
 	grid.addClassName("usr-grid");
 	grid.setItems(customerRepository.findAll());
 	customGridAddColumns();
-	customGridSelectionModeMultiSelect();
+	customGridSelectionModeSingle();
   }
 
   void customGridAddColumnsInLoop() {
@@ -74,7 +74,12 @@ class MainView extends VerticalLayout {
 	grid.addColumn(Usr::getPatronymic).setHeader("Patronymic").setSortable(true);
   }
 
-  void customGridSelectionMode() {
+  void customGridSelectionModeNone() {
+	grid.setSelectionMode(Grid.SelectionMode.NONE);
+	grid.addItemClickListener(event -> System.out.println(("Clicked Item: " + event.getItem())));
+  }
+
+  void customGridSelectionModeSingle() {
 	grid.setSelectionMode(Grid.SelectionMode.SINGLE);
 	grid.addSelectionListener(selectionEvent -> {
 	  selectionEvent.getFirstSelectedItem().ifPresent(user -> {
@@ -101,6 +106,21 @@ class MainView extends VerticalLayout {
 	grid.addSelectionListener(selectionEvent -> {
 	  Set<Usr> selected = selectionEvent.getAllSelectedItems();
 	  Notification.show(selected.size() + " items selected");
+	});
+//	customGridSelectionModeMultiSelectMode();
+  }
+
+  void customGridSelectionModeMultiSelectMode() {
+	GridMultiSelectionModel<Usr> selectionModel = (GridMultiSelectionModel<Usr>) grid.setSelectionMode(Grid.SelectionMode.MULTI);
+
+	selectionModel.selectAll();
+
+	selectionModel.addMultiSelectionListener(event -> {
+	  Notification.show(String.format(
+			"%s items added, %s removed.",
+			event.getAddedSelection().size(),
+			event.getRemovedSelection().size()));
+	  setEnabled(event.getNewSelection().isEmpty());
 	});
   }
 
