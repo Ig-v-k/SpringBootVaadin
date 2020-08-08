@@ -6,6 +6,8 @@ package com.full_webapp.vsapp;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridMultiSelectionModel;
+import com.vaadin.flow.component.grid.GridSingleSelectionModel;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.selection.MultiSelect;
@@ -87,6 +89,7 @@ class MainView extends VerticalLayout {
 	personSelect.addValueChangeListener(e -> {
 	  Usr selectedPerson = e.getValue();
 	});
+	customGridSelectionModeSingleSelectDeselect();
   }
 
   void customGridSelectionModeMultiSelect() {
@@ -96,10 +99,16 @@ class MainView extends VerticalLayout {
 	  Set<Usr> selectedPersons = e.getValue();
 	});
 	grid.addSelectionListener(selectionEvent -> {
-		  Set<Usr> selected = selectionEvent.getAllSelectedItems();
-		  Notification.show(selected.size() + " items selected");
-  	});
+	  Set<Usr> selected = selectionEvent.getAllSelectedItems();
+	  Notification.show(selected.size() + " items selected");
+	});
   }
+
+  void customGridSelectionModeSingleSelectDeselect() {
+	GridSingleSelectionModel<Usr> singleSelect = (GridSingleSelectionModel<Usr>) grid.getSelectionModel();
+	singleSelect.setDeselectAllowed(false);
+  }
+
 }
 
 @Route("any")
@@ -127,6 +136,8 @@ class SecondView extends VerticalLayout {
 
 /**
  * configuration
+ * <p>
+ * service
  * <p>
  * service
  * <p>
