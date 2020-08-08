@@ -8,9 +8,12 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridMultiSelectionModel;
 import com.vaadin.flow.component.grid.GridSingleSelectionModel;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.ListDataProvider;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.data.renderer.TemplateRenderer;
 import com.vaadin.flow.data.selection.MultiSelect;
 import com.vaadin.flow.data.selection.SingleSelect;
@@ -62,6 +65,7 @@ class MainView extends VerticalLayout {
 	customGridSelectionModeMulti();
 	customGridColumnReordering();
 	customGridAddColumnTemplateRendering();
+	customGridAddColumnComponentRendering();
   }
 
   void customGridAddColumnsInLoop() {
@@ -82,11 +86,21 @@ class MainView extends VerticalLayout {
 	grid.addColumn(Usr::getPatronymic).setHeader("Patronymic").setKey("patronymic-key");
   }
 
+  void customGridAddColumnComponentRendering() {
+	grid.addColumn(new ComponentRenderer<>(user -> {
+	  if (("Aa").equals(user.getLastName()) || ("Bb").equals(user.getLastName())) {
+		return new Icon(VaadinIcon.MALE);
+	  }
+	  else {
+		return new Icon(VaadinIcon.FEMALE);
+	  }
+	})).setHeader("Gender");
+  }
+
   void customGridAddColumnTemplateRendering() {
 	grid.addColumn(TemplateRenderer.<Usr>of(
 		  "<button on-click='handleUpdate'>Update</button>" + "<button on-click='handleRemove'>Remove</button>")
 		  .withEventHandler("handleUpdate", user -> {
-//			user.setFirstName(user.getFirstName() + " Updated");
 			Usr usr = customerRepository.findById(user.getId()).get();
 			usr.setFirstName(user.getFirstName() + "Updated");
 			customerRepository.save(usr);
