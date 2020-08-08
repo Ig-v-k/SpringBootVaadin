@@ -57,7 +57,7 @@ class MainView extends VerticalLayout {
 	grid.addClassName("usr-grid");
 	grid.setItems(customerRepository.findAll());
 	customGridAddColumns();
-	customGridSelectionModeSingle();
+	customGridSelectionModeMulti();
   }
 
   void customGridAddColumnsInLoop() {
@@ -97,7 +97,7 @@ class MainView extends VerticalLayout {
 	customGridSelectionModeSingleSelectDeselect();
   }
 
-  void customGridSelectionModeMultiSelect() {
+  void customGridSelectionModeMulti() {
 	grid.setSelectionMode(Grid.SelectionMode.MULTI);
 	MultiSelect<Grid<Usr>, Usr> multiSelect = grid.asMultiSelect();
 	multiSelect.addValueChangeListener(e -> {
@@ -107,6 +107,7 @@ class MainView extends VerticalLayout {
 	  Set<Usr> selected = selectionEvent.getAllSelectedItems();
 	  Notification.show(selected.size() + " items selected");
 	});
+	grid.addItemDoubleClickListener(event -> Notification.show(event.getItem().getFirstName() + " item double selected"));
 //	customGridSelectionModeMultiSelectMode();
   }
 
