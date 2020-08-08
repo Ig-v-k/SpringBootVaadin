@@ -8,8 +8,11 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.data.selection.MultiSelect;
+import com.vaadin.flow.data.selection.SingleSelect;
 import com.vaadin.flow.router.Route;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,6 +24,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import java.util.List;
+import java.util.Set;
 
 /**
  * main
@@ -37,16 +41,67 @@ public class VsappApplication {
  */
 @Route("app")
 class MainView extends VerticalLayout {
+  private final CustomerRepository customerRepository;
+  Grid<Usr> grid = new Grid<>();
+
   public MainView(CustomerRepository customerRepository) {
-    Grid<Usr> grid = new Grid<>(Usr.class);
-    add(grid);
-    grid.setItems(customerRepository.findAll());
+	this.customerRepository = customerRepository;
+	this.customGridMain();
+	addClassName("list-view");
+	add(grid);
+  }
+
+  void customGridMain() {
+	grid.addClassName("usr-grid");
+	grid.setItems(customerRepository.findAll());
+	customGridAddColumns();
+	customGridSelectionModeMultiSelect();
+  }
+
+  void customGridAddColumnsInLoop() {
+	grid.addColumn(usr -> usr.getId() + " " +
+		  usr.getFirstName() + " " +
+		  usr.getLastName() + " " +
+		  usr.getPatronymic()).setHeader("Id").setSortable(true);
+  }
+
+  void customGridAddColumns() {
+	grid.addColumn(Usr::getId);
+	grid.addColumn(Usr::getFirstName).setHeader("First Name").setSortable(true);
+	grid.addColumn(Usr::getLastName).setHeader("Last Name").setSortable(true);
+	grid.addColumn(Usr::getPatronymic).setHeader("Patronymic").setSortable(true);
+  }
+
+  void customGridSelectionMode() {
+    grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+	grid.addSelectionListener(selectionEvent -> {
+	  selectionEvent.getFirstSelectedItem().ifPresent(user -> {
+		Notification.show(user.getFirstName() + " is selected");
+	  });
+	});
+  }
+
+  void customGridSelectionModeSingleSelect() {
+    grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+	SingleSelect<Grid<Usr>, Usr> personSelect = grid.asSingleSelect();
+	personSelect.addValueChangeListener(e -> {
+	  Usr selectedPerson = e.getValue();
+	});
+  }
+
+  void customGridSelectionModeMultiSelect() {
+	grid.setSelectionMode(Grid.SelectionMode.MULTI);
+	MultiSelect<Grid<Usr>, Usr> multiSelect = grid.asMultiSelect();
+	multiSelect.addValueChangeListener(e -> {
+	  Set<Usr> selectedPersons = e.getValue();
+	});
   }
 }
+
 @Route("any")
 class SecondView extends VerticalLayout {
   public SecondView() {
-    add(new Button("Click me", e -> Notification.show("Hello, Spring+Vaadin user!")));
+	add(new Button("Click me", e -> Notification.show("Hello, Spring+Vaadin user!")));
   }
 }
 //@Route(value = "app")
@@ -68,6 +123,10 @@ class SecondView extends VerticalLayout {
 
 /**
  * configuration
+ * <p>
+ * service
+ * <p>
+ * service
  */
 //@Configuration
 //@EnableWebSecurity
@@ -191,8 +250,8 @@ class SecondView extends VerticalLayout {
 @Repository
 interface CustomerRepository extends JpaRepository<Usr, Integer> {
   @Query("from Usr c " +
-        "where concat(c.firstName, ' ', c.lastName, ' ', c.patronymic) " +
-        "like concat('%', :name, '%')")
+		"where concat(c.firstName, ' ', c.lastName, ' ', c.patronymic) " +
+		"like concat('%', :name, '%')")
   List<Usr> findByName(@Param("name") String name);
 }
 //@Repository
@@ -251,7 +310,8 @@ interface CustomerRepository extends JpaRepository<Usr, Integer> {
  */
 @Data
 @Entity
-class Usr{
+@NoArgsConstructor
+class Usr {
   @Id
   @GeneratedValue
   private Integer id;
@@ -330,4 +390,3 @@ class Usr{
 //		  .forEachOrdered(log::info);
 //  }
 //}
-
