@@ -10,6 +10,8 @@ import com.vaadin.flow.component.grid.GridMultiSelectionModel;
 import com.vaadin.flow.component.grid.GridSingleSelectionModel;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.data.provider.ListDataProvider;
+import com.vaadin.flow.data.renderer.TemplateRenderer;
 import com.vaadin.flow.data.selection.MultiSelect;
 import com.vaadin.flow.data.selection.SingleSelect;
 import com.vaadin.flow.router.Route;
@@ -59,6 +61,7 @@ class MainView extends VerticalLayout {
 	customGridAddColumns();
 	customGridSelectionModeMulti();
 	customGridColumnReordering();
+	customGridAddColumnTemplateRendering();
   }
 
   void customGridAddColumnsInLoop() {
@@ -74,9 +77,28 @@ class MainView extends VerticalLayout {
 
   void customGridAddColumns() {
 	grid.addColumn(Usr::getId).setFlexGrow(0).setWidth("100px").setResizable(true).setKey("Id-key").setFrozen(true);
-	grid.addColumn(Usr::getFirstName).setHeader("First Name");
-	grid.addColumn(Usr::getLastName).setHeader("Last Name");
-	grid.addColumn(Usr::getPatronymic).setHeader("Patronymic");
+	grid.addColumn(Usr::getFirstName).setHeader("First Name").setKey("firstName-key");
+	grid.addColumn(Usr::getLastName).setHeader("Last Name").setKey("lastName-key");
+	grid.addColumn(Usr::getPatronymic).setHeader("Patronymic").setKey("patronymic-key");
+  }
+
+  void customGridAddColumnTemplateRendering() {
+	grid.addColumn(TemplateRenderer.<Usr>of(
+		  "<button on-click='handleUpdate'>Update</button>" + "<button on-click='handleRemove'>Remove</button>")
+		  .withEventHandler("handleUpdate", user -> {
+//			user.setFirstName(user.getFirstName() + " Updated");
+			Usr usr = customerRepository.findById(user.getId()).get();
+			usr.setFirstName(user.getFirstName() + "Updated");
+			customerRepository.save(usr);
+			grid.getDataProvider().refreshItem(user);
+		  })
+		  .withEventHandler("handleRemove", person -> {
+			ListDataProvider<Usr> dataProvider = (ListDataProvider<Usr>) grid.getDataProvider();
+			dataProvider.getItems().remove(person);
+			dataProvider.refreshAll();
+		  })
+	)
+		  .setHeader("Actions");
   }
 
   void customGridSelectionModeNone() {
@@ -162,6 +184,8 @@ class SecondView extends VerticalLayout {
 
 /**
  * configuration
+ * <p>
+ * service
  * <p>
  * service
  * <p>
