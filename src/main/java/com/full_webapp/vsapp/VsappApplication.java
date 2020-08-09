@@ -4,13 +4,22 @@ package com.full_webapp.vsapp;
  * A simple project for learn Vaadin with the Spring
  */
 
+import com.vaadin.flow.component.Text;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridMultiSelectionModel;
 import com.vaadin.flow.component.grid.GridSingleSelectionModel;
+import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.NativeButton;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.login.LoginI18n;
+import com.vaadin.flow.component.login.LoginOverlay;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -21,6 +30,8 @@ import com.vaadin.flow.data.renderer.TemplateRenderer;
 import com.vaadin.flow.data.selection.MultiSelect;
 import com.vaadin.flow.data.selection.SingleSelect;
 import com.vaadin.flow.function.SerializableBiConsumer;
+import com.vaadin.flow.router.BeforeLeaveEvent;
+import com.vaadin.flow.router.BeforeLeaveObserver;
 import com.vaadin.flow.router.Route;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -50,22 +61,50 @@ public class VsappApplication {
 /**
  * views
  */
-@Route("app")
-class MainView extends VerticalLayout {
+@Route("")
+class MainView extends VerticalLayout implements BeforeLeaveObserver {
   private final CustomerRepository customerRepository;
   Grid<Usr> grid = new Grid<>();
+  Button loginButton = new Button("Login", new Icon(VaadinIcon.ARROW_LEFT));
+  Dialog dialog = new Dialog(new Label("Are you sure you want to leave this page?"));
 
   public MainView(CustomerRepository customerRepository) {
 	this.customerRepository = customerRepository;
+
 	this.customGridMain();
-	addClassName("list-view");
-	add(grid);
+	this.customButtonMain();
+	this.customDialogMain();
+
+	addClassName("main-view");
+
+	add(grid, loginButton, dialog);
+  }
+
+  void customButtonMain() {
+	loginButton.getElement().setAttribute("aria-label", "Click me");
+	customButtonClickListenerMain();
+  }
+
+  void customDialogMain() {
+	dialog.setCloseOnEsc(false);
+	dialog.setCloseOnOutsideClick(false);
+  }
+
+  void customDialogNativeButtonsInto(BeforeLeaveEvent.ContinueNavigationAction action) {
+	NativeButton confirmButton = new NativeButton("Confirm", event -> {
+	  action.proceed();
+	  dialog.close();
+	});
+	NativeButton cancelButton = new NativeButton("Cancel", event -> {
+	  dialog.close();
+	});
+	dialog.add(confirmButton, cancelButton);
   }
 
   void customGridMain() {
 	grid.addClassName("usr-grid");
 	grid.setWidthFull();
-	grid.setHeight("1000px");
+	grid.setHeight("800px");
 	grid.setItems(customerRepository.findAll());
 	customGridAddColumns();
 	customGridSelectionModeMulti();
@@ -74,6 +113,10 @@ class MainView extends VerticalLayout {
 	customGridAddColumnComponentRendering();
 	customGridAddColumnBiConsumer();
 	customGridAddColumnTemplateRenderingButtons();
+  }
+
+  void customButtonClickListenerMain() {
+	loginButton.addClickListener(buttonClickEvent -> UI.getCurrent().navigate("login"));
   }
 
   void customGridAddColumnsInLoop() {
@@ -106,8 +149,7 @@ class MainView extends VerticalLayout {
 	grid.addColumn(new ComponentRenderer<>(user -> {
 	  if (("Aa").equals(user.getLastName()) || ("Bb").equals(user.getLastName())) {
 		return new Icon(VaadinIcon.MALE);
-	  }
-	  else {
+	  } else {
 		return new Icon(VaadinIcon.FEMALE);
 	  }
 	})).setHeader("Gender");
@@ -152,6 +194,10 @@ class MainView extends VerticalLayout {
 	  HorizontalLayout buttons = new HorizontalLayout(update, remove);
 	  return new VerticalLayout(name, buttons);
 	})).setHeader("Actions");
+  }
+
+  void customGridAddTheme() {
+	grid.addThemeVariants(GridVariant.LUMO_NO_ROW_BORDERS, GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_ROW_STRIPES);
   }
 
   void customGridSelectionModeNone() {
@@ -210,12 +256,36 @@ class MainView extends VerticalLayout {
 	singleSelect.setDeselectAllowed(false);
   }
 
+  @Override
+  public void beforeLeave(BeforeLeaveEvent beforeLeaveEvent) {
+	BeforeLeaveEvent.ContinueNavigationAction continueNavigationAction = beforeLeaveEvent.postpone();
+	dialog.open();
+	customDialogNativeButtonsInto(continueNavigationAction);
+  }
 }
 
-@Route("any")
-class SecondView extends VerticalLayout {
-  public SecondView() {
-	add(new Button("Click me", e -> Notification.show("Hello, Spring+Vaadin user!")));
+@Route("login")
+class LoginView extends VerticalLayout {
+  public LoginView() {
+	LoginOverlay component = new LoginOverlay();
+	H1 title = new H1();
+	Icon icon = VaadinIcon.VAADIN_H.create();
+	title.getStyle().set("color", "var(--lumo-base-color)");
+	icon.setSize("30px");
+	icon.getStyle().set("top", "-4px");
+	title.add(icon);
+	title.add(new Text(" My App"));
+	component.setTitle(title);
+	component.addLoginListener(e -> component.close());
+
+	LoginI18n i18n = LoginI18n.createDefault();
+	i18n.setAdditionalInformation("To close the login form submit non-empty username and password");
+	component.setI18n(i18n);
+
+	Button open = new Button("Open login overlay",
+		  e -> component.setOpened(true));
+
+	add(open, component, title, icon);
   }
 }
 //@Route(value = "app")
@@ -237,14 +307,6 @@ class SecondView extends VerticalLayout {
 
 /**
  * configuration
- * <p>
- * service
- * <p>
- * service
- * <p>
- * service
- * <p>
- * service
  * <p>
  * service
  */
