@@ -7,12 +7,9 @@ package com.full_webapp.vsapp;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.grid.GridMultiSelectionModel;
-import com.vaadin.flow.component.grid.GridSingleSelectionModel;
-import com.vaadin.flow.component.grid.GridVariant;
-import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.html.NativeButton;
@@ -20,16 +17,8 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.login.LoginI18n;
 import com.vaadin.flow.component.login.LoginOverlay;
-import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.data.provider.ListDataProvider;
-import com.vaadin.flow.data.renderer.ComponentRenderer;
-import com.vaadin.flow.data.renderer.TemplateRenderer;
-import com.vaadin.flow.data.selection.MultiSelect;
-import com.vaadin.flow.data.selection.SingleSelect;
-import com.vaadin.flow.function.SerializableBiConsumer;
 import com.vaadin.flow.router.BeforeLeaveEvent;
 import com.vaadin.flow.router.BeforeLeaveObserver;
 import com.vaadin.flow.router.Route;
@@ -46,7 +35,6 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import java.util.List;
-import java.util.Set;
 
 /**
  * main
@@ -67,17 +55,29 @@ class MainView extends VerticalLayout implements BeforeLeaveObserver {
   Grid<Usr> grid = new Grid<>();
   Button loginButton = new Button("Login", new Icon(VaadinIcon.ARROW_LEFT));
   Dialog dialog = new Dialog(new Label("Are you sure you want to leave this page?"));
+  NativeButton confirmButton = new NativeButton("Confirm");
+  NativeButton cancelButton = new NativeButton("Cancel");
+  MenuBar menuBar = new MenuBar();
+  MenuItem menuBarMainPage = menuBar.addItem("Main");
+  MenuItem menuBarLoginPage = menuBar.addItem("Login");
 
   public MainView(CustomerRepository customerRepository) {
 	this.customerRepository = customerRepository;
 
-	this.customGridMain();
+//	this.customGridMain();
+	this.customMenuBarMain();
 	this.customButtonMain();
 	this.customDialogMain();
 
 	addClassName("main-view");
 
-	add(grid, loginButton, dialog);
+	add(/*grid, */loginButton, dialog, menuBar);
+  }
+
+  void customMenuBarMain() {
+	menuBar.setOpenOnHover(true);
+	menuBarMainPage.addClickListener(menuItemClickEvent -> UI.getCurrent().navigate(""));
+	menuBarLoginPage.addClickListener(menuItemClickEvent -> UI.getCurrent().navigate("login"));
   }
 
   void customButtonMain() {
@@ -91,170 +91,169 @@ class MainView extends VerticalLayout implements BeforeLeaveObserver {
   }
 
   void customDialogNativeButtonsInto(BeforeLeaveEvent.ContinueNavigationAction action) {
-	NativeButton confirmButton = new NativeButton("Confirm", event -> {
-	  action.proceed();
-	  dialog.close();
-	});
-	NativeButton cancelButton = new NativeButton("Cancel", event -> {
-	  dialog.close();
-	});
+	confirmButton.addClickListener(nativeButtonClickEvent ->
+		  action.proceed()
+	);
+	cancelButton.addClickListener(nativeButtonClickEvent ->
+		  dialog.close()
+	);
 	dialog.add(confirmButton, cancelButton);
   }
 
-  void customGridMain() {
-	grid.addClassName("usr-grid");
-	grid.setWidthFull();
-	grid.setHeight("800px");
-	grid.setItems(customerRepository.findAll());
-	customGridAddColumns();
-	customGridSelectionModeMulti();
-	customGridColumnReordering();
-	customGridAddColumnTemplateRendering();
-	customGridAddColumnComponentRendering();
-	customGridAddColumnBiConsumer();
-	customGridAddColumnTemplateRenderingButtons();
-  }
+//  void customGridMain() {
+//	grid.addClassName("usr-grid");
+//	grid.setWidthFull();
+//	grid.setHeight("800px");
+//	grid.setItems(customerRepository.findAll());
+//	customGridAddColumns();
+//	customGridSelectionModeMulti();
+//	customGridColumnReordering();
+//	customGridAddColumnTemplateRendering();
+//	customGridAddColumnComponentRendering();
+//	customGridAddColumnBiConsumer();
+//	customGridAddColumnTemplateRenderingButtons();
+//  }
 
   void customButtonClickListenerMain() {
 	loginButton.addClickListener(buttonClickEvent -> UI.getCurrent().navigate("login"));
   }
 
-  void customGridAddColumnsInLoop() {
-	grid.addColumn(usr -> usr.getId() + " " +
-		  usr.getFirstName() + " " +
-		  usr.getLastName() + " " +
-		  usr.getPatronymic()).setHeader("Id").setSortable(true);
-  }
-
-  void customGridColumnReordering() {
-	grid.setColumnReorderingAllowed(true);
-  }
-
-  void customGridAddColumns() {
-	grid.addColumn(Usr::getId).setFlexGrow(0).setWidth("100px").setResizable(true).setKey("Id-key").setFrozen(true);
-	grid.addColumn(Usr::getFirstName).setHeader("First Name").setKey("firstName-key");
-	grid.addColumn(Usr::getLastName).setHeader("Last Name").setKey("lastName-key");
-	grid.addColumn(Usr::getPatronymic).setHeader("Patronymic").setKey("patronymic-key");
-  }
-
-  void customGridAddColumnBiConsumer() {
-	SerializableBiConsumer<Div, Usr> consumer =
-		  (div, person) -> div.setText(person.getPatronymic() + " consumer");
-	grid.addColumn(
-		  new ComponentRenderer<>(Div::new, consumer))
-		  .setHeader("DivBiConsumer");
-  }
-
-  void customGridAddColumnComponentRendering() {
-	grid.addColumn(new ComponentRenderer<>(user -> {
-	  if (("Aa").equals(user.getLastName()) || ("Bb").equals(user.getLastName())) {
-		return new Icon(VaadinIcon.MALE);
-	  } else {
-		return new Icon(VaadinIcon.FEMALE);
-	  }
-	})).setHeader("Gender");
-	grid.addColumn(
-		  new ComponentRenderer<>(
-				() -> new Icon(VaadinIcon.ARROW_LEFT)));
-  }
-
-  void customGridAddColumnTemplateRendering() {
-	grid.addColumn(TemplateRenderer.<Usr>of(
-		  "<button on-click='handleUpdate'>Update</button>" + "<button on-click='handleRemove'>Remove</button>")
-		  .withEventHandler("handleUpdate", user -> {
-			Usr usr = customerRepository.findById(user.getId()).get();
-			usr.setFirstName(user.getFirstName() + "Updated");
-			customerRepository.save(usr);
-			grid.getDataProvider().refreshItem(user);
-		  })
-		  .withEventHandler("handleRemove", person -> {
-			ListDataProvider<Usr> dataProvider = (ListDataProvider<Usr>) grid.getDataProvider();
-			dataProvider.getItems().remove(person);
-			dataProvider.refreshAll();
-		  })
-	)
-		  .setHeader("Actions");
-  }
-
-  void customGridAddColumnTemplateRenderingButtons() {
-	grid.addColumn(new ComponentRenderer<>(person -> {
-	  TextField name = new TextField("Name_b");
-	  Usr usr = customerRepository.findById(1).get();
-	  name.setValue(usr.getFirstName() + "_b");
-	  Button update = new Button("Update", event -> {
-		usr.setFirstName(usr.getFirstName() + "_bb");
-		customerRepository.save(usr);
-		grid.getDataProvider().refreshItem(usr);
-	  });
-	  Button remove = new Button("Remove", event -> {
-		ListDataProvider<Usr> dataProvider = (ListDataProvider<Usr>) grid.getDataProvider();
-		dataProvider.getItems().remove(usr);
-		dataProvider.refreshAll();
-	  });
-	  HorizontalLayout buttons = new HorizontalLayout(update, remove);
-	  return new VerticalLayout(name, buttons);
-	})).setHeader("Actions");
-  }
-
-  void customGridAddTheme() {
-	grid.addThemeVariants(GridVariant.LUMO_NO_ROW_BORDERS, GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_ROW_STRIPES);
-  }
-
-  void customGridSelectionModeNone() {
-	grid.setSelectionMode(Grid.SelectionMode.NONE);
-	grid.addItemClickListener(event -> System.out.println(("Clicked Item: " + event.getItem())));
-  }
-
-  void customGridSelectionModeSingle() {
-	grid.setSelectionMode(Grid.SelectionMode.SINGLE);
-	grid.addSelectionListener(selectionEvent -> {
-	  selectionEvent.getFirstSelectedItem().ifPresent(user -> {
-		Notification.show(user.getFirstName() + " is selected");
-	  });
-	});
-  }
-
-  void customGridSelectionModeSingleSelect() {
-	grid.setSelectionMode(Grid.SelectionMode.SINGLE);
-	SingleSelect<Grid<Usr>, Usr> personSelect = grid.asSingleSelect();
-	personSelect.addValueChangeListener(e -> {
-	  Usr selectedPerson = e.getValue();
-	});
-	customGridSelectionModeSingleSelectDeselect();
-  }
-
-  void customGridSelectionModeMulti() {
-	grid.setSelectionMode(Grid.SelectionMode.MULTI);
-	MultiSelect<Grid<Usr>, Usr> multiSelect = grid.asMultiSelect();
-	multiSelect.addValueChangeListener(e -> {
-	  Set<Usr> selectedPersons = e.getValue();
-	});
-	grid.addSelectionListener(selectionEvent -> {
-	  Set<Usr> selected = selectionEvent.getAllSelectedItems();
-	  Notification.show(selected.size() + " items selected");
-	});
-	grid.addItemDoubleClickListener(event -> Notification.show(event.getItem().getFirstName() + " item double selected"));
-//	customGridSelectionModeMultiSelectMode();
-  }
-
-  void customGridSelectionModeMultiSelectMode() {
-	GridMultiSelectionModel<Usr> selectionModel = (GridMultiSelectionModel<Usr>) grid.setSelectionMode(Grid.SelectionMode.MULTI);
-
-	selectionModel.selectAll();
-
-	selectionModel.addMultiSelectionListener(event -> {
-	  Notification.show(String.format(
-			"%s items added, %s removed.",
-			event.getAddedSelection().size(),
-			event.getRemovedSelection().size()));
-	  setEnabled(event.getNewSelection().isEmpty());
-	});
-  }
-
-  void customGridSelectionModeSingleSelectDeselect() {
-	GridSingleSelectionModel<Usr> singleSelect = (GridSingleSelectionModel<Usr>) grid.getSelectionModel();
-	singleSelect.setDeselectAllowed(false);
-  }
+//  void customGridAddColumnsInLoop() {
+//	grid.addColumn(usr -> usr.getId() + " " +
+//		  usr.getFirstName() + " " +
+//		  usr.getLastName() + " " +
+//		  usr.getPatronymic()).setHeader("Id").setSortable(true);
+//  }
+//
+//  void customGridColumnReordering() {
+//	grid.setColumnReorderingAllowed(true);
+//  }
+//
+//  void customGridAddColumns() {
+//	grid.addColumn(Usr::getId).setFlexGrow(0).setWidth("100px").setResizable(true).setKey("Id-key").setFrozen(true);
+//	grid.addColumn(Usr::getFirstName).setHeader("First Name").setKey("firstName-key");
+//	grid.addColumn(Usr::getLastName).setHeader("Last Name").setKey("lastName-key");
+//	grid.addColumn(Usr::getPatronymic).setHeader("Patronymic").setKey("patronymic-key");
+//  }
+//
+//  void customGridAddColumnBiConsumer() {
+//	SerializableBiConsumer<Div, Usr> consumer =
+//		  (div, person) -> div.setText(person.getPatronymic() + " consumer");
+//	grid.addColumn(
+//		  new ComponentRenderer<>(Div::new, consumer))
+//		  .setHeader("DivBiConsumer");
+//  }
+//
+//  void customGridAddColumnComponentRendering() {
+//	grid.addColumn(new ComponentRenderer<>(user -> {
+//	  if (("Aa").equals(user.getLastName()) || ("Bb").equals(user.getLastName())) {
+//		return new Icon(VaadinIcon.MALE);
+//	  } else {
+//		return new Icon(VaadinIcon.FEMALE);
+//	  }
+//	})).setHeader("Gender");
+//	grid.addColumn(
+//		  new ComponentRenderer<>(
+//				() -> new Icon(VaadinIcon.ARROW_LEFT)));
+//  }
+//
+//  void customGridAddColumnTemplateRendering() {
+//	grid.addColumn(TemplateRenderer.<Usr>of(
+//		  "<button on-click='handleUpdate'>Update</button>" + "<button on-click='handleRemove'>Remove</button>")
+//		  .withEventHandler("handleUpdate", user -> {
+//			Usr usr = customerRepository.findById(user.getId()).get();
+//			usr.setFirstName(user.getFirstName() + "Updated");
+//			customerRepository.save(usr);
+//			grid.getDataProvider().refreshItem(user);
+//		  })
+//		  .withEventHandler("handleRemove", person -> {
+//			ListDataProvider<Usr> dataProvider = (ListDataProvider<Usr>) grid.getDataProvider();
+//			dataProvider.getItems().remove(person);
+//			dataProvider.refreshAll();
+//		  })
+//	)
+//		  .setHeader("Actions");
+//  }
+//
+//  void customGridAddColumnTemplateRenderingButtons() {
+//	grid.addColumn(new ComponentRenderer<>(person -> {
+//	  TextField name = new TextField("Name_b");
+//	  Usr usr = customerRepository.findById(1).get();
+//	  name.setValue(usr.getFirstName() + "_b");
+//	  Button update = new Button("Update", event -> {
+//		usr.setFirstName(usr.getFirstName() + "_bb");
+//		customerRepository.save(usr);
+//		grid.getDataProvider().refreshItem(usr);
+//	  });
+//	  Button remove = new Button("Remove", event -> {
+//		ListDataProvider<Usr> dataProvider = (ListDataProvider<Usr>) grid.getDataProvider();
+//		dataProvider.getItems().remove(usr);
+//		dataProvider.refreshAll();
+//	  });
+//	  HorizontalLayout buttons = new HorizontalLayout(update, remove);
+//	  return new VerticalLayout(name, buttons);
+//	})).setHeader("Actions");
+//  }
+//
+//  void customGridAddTheme() {
+//	grid.addThemeVariants(GridVariant.LUMO_NO_ROW_BORDERS, GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_ROW_STRIPES);
+//  }
+//
+//  void customGridSelectionModeNone() {
+//	grid.setSelectionMode(Grid.SelectionMode.NONE);
+//	grid.addItemClickListener(event -> System.out.println(("Clicked Item: " + event.getItem())));
+//  }
+//
+//  void customGridSelectionModeSingle() {
+//	grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+//	grid.addSelectionListener(selectionEvent -> {
+//	  selectionEvent.getFirstSelectedItem().ifPresent(user -> {
+//		Notification.show(user.getFirstName() + " is selected");
+//	  });
+//	});
+//  }
+//
+//  void customGridSelectionModeSingleSelect() {
+//	grid.setSelectionMode(Grid.SelectionMode.SINGLE);
+//	SingleSelect<Grid<Usr>, Usr> personSelect = grid.asSingleSelect();
+//	personSelect.addValueChangeListener(e -> {
+//	  Usr selectedPerson = e.getValue();
+//	});
+//	customGridSelectionModeSingleSelectDeselect();
+//  }
+//
+//  void customGridSelectionModeMulti() {
+//	grid.setSelectionMode(Grid.SelectionMode.MULTI);
+//	MultiSelect<Grid<Usr>, Usr> multiSelect = grid.asMultiSelect();
+//	multiSelect.addValueChangeListener(e -> {
+//	  Set<Usr> selectedPersons = e.getValue();
+//	});
+//	grid.addSelectionListener(selectionEvent -> {
+//	  Set<Usr> selected = selectionEvent.getAllSelectedItems();
+//	  Notification.show(selected.size() + " items selected");
+//	});
+//	grid.addItemDoubleClickListener(event -> Notification.show(event.getItem().getFirstName() + " item double selected"));
+////	customGridSelectionModeMultiSelectMode();
+//  }
+//
+//  void customGridSelectionModeMultiSelectMode() {
+//	GridMultiSelectionModel<Usr> selectionModel = (GridMultiSelectionModel<Usr>) grid.setSelectionMode(Grid.SelectionMode.MULTI);
+//
+//	selectionModel.selectAll();
+//
+//	selectionModel.addMultiSelectionListener(event -> {
+//	  Notification.show(String.format(
+//			"%s items added, %s removed.",
+//			event.getAddedSelection().size(),
+//			event.getRemovedSelection().size()));
+//	  setEnabled(event.getNewSelection().isEmpty());
+//	});
+//  }
+//
+//  void customGridSelectionModeSingleSelectDeselect() {
+//	GridSingleSelectionModel<Usr> singleSelect = (GridSingleSelectionModel<Usr>) grid.getSelectionModel();
+//	singleSelect.setDeselectAllowed(false);
+//  }
 
   @Override
   public void beforeLeave(BeforeLeaveEvent beforeLeaveEvent) {
@@ -307,8 +306,6 @@ class LoginView extends VerticalLayout {
 
 /**
  * configuration
- * <p>
- * service
  */
 //@Configuration
 //@EnableWebSecurity
