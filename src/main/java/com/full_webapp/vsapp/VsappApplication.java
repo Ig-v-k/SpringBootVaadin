@@ -4,23 +4,28 @@ package com.full_webapp.vsapp;
  * A simple project for learn Vaadin with the Spring
  */
 
+
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.applayout.AppLayout;
+import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.Label;
-import com.vaadin.flow.component.html.NativeButton;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.login.LoginI18n;
 import com.vaadin.flow.component.login.LoginOverlay;
 import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.tabs.Tab;
+import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.router.BeforeLeaveEvent;
 import com.vaadin.flow.router.BeforeLeaveObserver;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -259,6 +264,7 @@ class MainView extends VerticalLayout implements BeforeLeaveObserver {
   public void beforeLeave(BeforeLeaveEvent beforeLeaveEvent) {
 	BeforeLeaveEvent.ContinueNavigationAction continueNavigationAction = beforeLeaveEvent.postpone();
 	dialog.open();
+//	beforeLeaveEvent.forwardTo(LoginView.class);
 	customDialogNativeButtonsInto(continueNavigationAction);
   }
 }
@@ -285,6 +291,27 @@ class LoginView extends VerticalLayout {
 		  e -> component.setOpened(true));
 
 	add(open, component, title, icon);
+  }
+}
+
+@Route(value = "app-layout-basic")
+@PageTitle("Basic App Layout")
+class BasicAppLayoutView extends AppLayout {
+  public BasicAppLayoutView() {
+	Image img = new Image("https://i.imgur.com/GPpnszs.png", "Vaadin Logo");
+	img.setHeight("44px");
+	addToNavbar(new DrawerToggle(), img);
+	Tabs tabs = new Tabs(new Tab("Home"), new Tab("About"));
+	tabs.setOrientation(Tabs.Orientation.VERTICAL);
+	addToDrawer(tabs);
+	VerticalLayout main = new VerticalLayout();
+
+	Button sourceButton = new Button("View source code",
+		  new Image("icons/iconfinder_mark-github_298822_64.png", "View source code"),
+		  event -> UI.getCurrent().getPage().setLocation("https://github.com/Ig-v-k/SpringBootVaadin/blob/master/src/main/java/com/full_webapp/vsapp/VsappApplication.java"));
+
+	main.add(new H1("Header text"), new Paragraph("Main content goes here."), sourceButton);
+	setContent(main);
   }
 }
 //@Route(value = "app")
