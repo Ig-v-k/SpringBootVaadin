@@ -1,45 +1,65 @@
 package com.full_webapp.vsapp;
 
-/**
- * A simple project for learn Vaadin with the Spring
- */
-
-
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.contextmenu.MenuItem;
-import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.html.*;
-import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.dependency.JsModule;
+import com.vaadin.flow.component.dependency.NpmPackage;
+import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.login.LoginI18n;
 import com.vaadin.flow.component.login.LoginOverlay;
-import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.polymertemplate.PolymerTemplate;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
-import com.vaadin.flow.router.BeforeLeaveEvent;
-import com.vaadin.flow.router.BeforeLeaveObserver;
-import com.vaadin.flow.router.PageTitle;
-import com.vaadin.flow.router.Route;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.vaadin.flow.dom.ElementFactory;
+import com.vaadin.flow.router.*;
+import com.vaadin.flow.server.HandlerHelper;
+import com.vaadin.flow.server.ServiceInitEvent;
+import com.vaadin.flow.server.VaadinServiceInitListener;
+import com.vaadin.flow.shared.ApplicationConstants;
+import com.vaadin.flow.spring.annotation.SpringComponent;
+import com.vaadin.flow.templatemodel.TemplateModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.stereotype.Service;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * main
@@ -54,246 +74,6 @@ public class VsappApplication {
 /**
  * views
  */
-@Route("")
-class MainView extends VerticalLayout implements BeforeLeaveObserver {
-  private final CustomerRepository customerRepository;
-  Grid<Usr> grid = new Grid<>();
-  Button loginButton = new Button("Login", new Icon(VaadinIcon.ARROW_LEFT));
-  Dialog dialog = new Dialog(new Label("Are you sure you want to leave this page?"));
-  NativeButton confirmButton = new NativeButton("Confirm");
-  NativeButton cancelButton = new NativeButton("Cancel");
-  MenuBar menuBar = new MenuBar();
-  MenuItem menuBarMainPage = menuBar.addItem("Main");
-  MenuItem menuBarLoginPage = menuBar.addItem("Login");
-
-  public MainView(CustomerRepository customerRepository) {
-	this.customerRepository = customerRepository;
-
-//	this.customGridMain();
-	this.customMenuBarMain();
-	this.customButtonMain();
-	this.customDialogMain();
-
-	addClassName("main-view");
-
-	add(/*grid, */loginButton, dialog, menuBar);
-  }
-
-  void customMenuBarMain() {
-	menuBar.setOpenOnHover(true);
-	menuBarMainPage.addClickListener(menuItemClickEvent -> UI.getCurrent().navigate(""));
-	menuBarLoginPage.addClickListener(menuItemClickEvent -> UI.getCurrent().navigate("login"));
-  }
-
-  void customButtonMain() {
-	loginButton.getElement().setAttribute("aria-label", "Click me");
-	customButtonClickListenerMain();
-  }
-
-  void customDialogMain() {
-	dialog.setCloseOnEsc(false);
-	dialog.setCloseOnOutsideClick(false);
-  }
-
-  void customDialogNativeButtonsInto(BeforeLeaveEvent.ContinueNavigationAction action) {
-	confirmButton.addClickListener(nativeButtonClickEvent ->
-		  action.proceed()
-	);
-	cancelButton.addClickListener(nativeButtonClickEvent ->
-		  dialog.close()
-	);
-	dialog.add(confirmButton, cancelButton);
-  }
-
-//  void customGridMain() {
-//	grid.addClassName("usr-grid");
-//	grid.setWidthFull();
-//	grid.setHeight("800px");
-//	grid.setItems(customerRepository.findAll());
-//	customGridAddColumns();
-//	customGridSelectionModeMulti();
-//	customGridColumnReordering();
-//	customGridAddColumnTemplateRendering();
-//	customGridAddColumnComponentRendering();
-//	customGridAddColumnBiConsumer();
-//	customGridAddColumnTemplateRenderingButtons();
-//  }
-
-  void customButtonClickListenerMain() {
-	loginButton.addClickListener(buttonClickEvent -> UI.getCurrent().navigate("login"));
-  }
-
-//  void customGridAddColumnsInLoop() {
-//	grid.addColumn(usr -> usr.getId() + " " +
-//		  usr.getFirstName() + " " +
-//		  usr.getLastName() + " " +
-//		  usr.getPatronymic()).setHeader("Id").setSortable(true);
-//  }
-//
-//  void customGridColumnReordering() {
-//	grid.setColumnReorderingAllowed(true);
-//  }
-//
-//  void customGridAddColumns() {
-//	grid.addColumn(Usr::getId).setFlexGrow(0).setWidth("100px").setResizable(true).setKey("Id-key").setFrozen(true);
-//	grid.addColumn(Usr::getFirstName).setHeader("First Name").setKey("firstName-key");
-//	grid.addColumn(Usr::getLastName).setHeader("Last Name").setKey("lastName-key");
-//	grid.addColumn(Usr::getPatronymic).setHeader("Patronymic").setKey("patronymic-key");
-//  }
-//
-//  void customGridAddColumnBiConsumer() {
-//	SerializableBiConsumer<Div, Usr> consumer =
-//		  (div, person) -> div.setText(person.getPatronymic() + " consumer");
-//	grid.addColumn(
-//		  new ComponentRenderer<>(Div::new, consumer))
-//		  .setHeader("DivBiConsumer");
-//  }
-//
-//  void customGridAddColumnComponentRendering() {
-//	grid.addColumn(new ComponentRenderer<>(user -> {
-//	  if (("Aa").equals(user.getLastName()) || ("Bb").equals(user.getLastName())) {
-//		return new Icon(VaadinIcon.MALE);
-//	  } else {
-//		return new Icon(VaadinIcon.FEMALE);
-//	  }
-//	})).setHeader("Gender");
-//	grid.addColumn(
-//		  new ComponentRenderer<>(
-//				() -> new Icon(VaadinIcon.ARROW_LEFT)));
-//  }
-//
-//  void customGridAddColumnTemplateRendering() {
-//	grid.addColumn(TemplateRenderer.<Usr>of(
-//		  "<button on-click='handleUpdate'>Update</button>" + "<button on-click='handleRemove'>Remove</button>")
-//		  .withEventHandler("handleUpdate", user -> {
-//			Usr usr = customerRepository.findById(user.getId()).get();
-//			usr.setFirstName(user.getFirstName() + "Updated");
-//			customerRepository.save(usr);
-//			grid.getDataProvider().refreshItem(user);
-//		  })
-//		  .withEventHandler("handleRemove", person -> {
-//			ListDataProvider<Usr> dataProvider = (ListDataProvider<Usr>) grid.getDataProvider();
-//			dataProvider.getItems().remove(person);
-//			dataProvider.refreshAll();
-//		  })
-//	)
-//		  .setHeader("Actions");
-//  }
-//
-//  void customGridAddColumnTemplateRenderingButtons() {
-//	grid.addColumn(new ComponentRenderer<>(person -> {
-//	  TextField name = new TextField("Name_b");
-//	  Usr usr = customerRepository.findById(1).get();
-//	  name.setValue(usr.getFirstName() + "_b");
-//	  Button update = new Button("Update", event -> {
-//		usr.setFirstName(usr.getFirstName() + "_bb");
-//		customerRepository.save(usr);
-//		grid.getDataProvider().refreshItem(usr);
-//	  });
-//	  Button remove = new Button("Remove", event -> {
-//		ListDataProvider<Usr> dataProvider = (ListDataProvider<Usr>) grid.getDataProvider();
-//		dataProvider.getItems().remove(usr);
-//		dataProvider.refreshAll();
-//	  });
-//	  HorizontalLayout buttons = new HorizontalLayout(update, remove);
-//	  return new VerticalLayout(name, buttons);
-//	})).setHeader("Actions");
-//  }
-//
-//  void customGridAddTheme() {
-//	grid.addThemeVariants(GridVariant.LUMO_NO_ROW_BORDERS, GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_ROW_STRIPES);
-//  }
-//
-//  void customGridSelectionModeNone() {
-//	grid.setSelectionMode(Grid.SelectionMode.NONE);
-//	grid.addItemClickListener(event -> System.out.println(("Clicked Item: " + event.getItem())));
-//  }
-//
-//  void customGridSelectionModeSingle() {
-//	grid.setSelectionMode(Grid.SelectionMode.SINGLE);
-//	grid.addSelectionListener(selectionEvent -> {
-//	  selectionEvent.getFirstSelectedItem().ifPresent(user -> {
-//		Notification.show(user.getFirstName() + " is selected");
-//	  });
-//	});
-//  }
-//
-//  void customGridSelectionModeSingleSelect() {
-//	grid.setSelectionMode(Grid.SelectionMode.SINGLE);
-//	SingleSelect<Grid<Usr>, Usr> personSelect = grid.asSingleSelect();
-//	personSelect.addValueChangeListener(e -> {
-//	  Usr selectedPerson = e.getValue();
-//	});
-//	customGridSelectionModeSingleSelectDeselect();
-//  }
-//
-//  void customGridSelectionModeMulti() {
-//	grid.setSelectionMode(Grid.SelectionMode.MULTI);
-//	MultiSelect<Grid<Usr>, Usr> multiSelect = grid.asMultiSelect();
-//	multiSelect.addValueChangeListener(e -> {
-//	  Set<Usr> selectedPersons = e.getValue();
-//	});
-//	grid.addSelectionListener(selectionEvent -> {
-//	  Set<Usr> selected = selectionEvent.getAllSelectedItems();
-//	  Notification.show(selected.size() + " items selected");
-//	});
-//	grid.addItemDoubleClickListener(event -> Notification.show(event.getItem().getFirstName() + " item double selected"));
-////	customGridSelectionModeMultiSelectMode();
-//  }
-//
-//  void customGridSelectionModeMultiSelectMode() {
-//	GridMultiSelectionModel<Usr> selectionModel = (GridMultiSelectionModel<Usr>) grid.setSelectionMode(Grid.SelectionMode.MULTI);
-//
-//	selectionModel.selectAll();
-//
-//	selectionModel.addMultiSelectionListener(event -> {
-//	  Notification.show(String.format(
-//			"%s items added, %s removed.",
-//			event.getAddedSelection().size(),
-//			event.getRemovedSelection().size()));
-//	  setEnabled(event.getNewSelection().isEmpty());
-//	});
-//  }
-//
-//  void customGridSelectionModeSingleSelectDeselect() {
-//	GridSingleSelectionModel<Usr> singleSelect = (GridSingleSelectionModel<Usr>) grid.getSelectionModel();
-//	singleSelect.setDeselectAllowed(false);
-//  }
-
-  @Override
-  public void beforeLeave(BeforeLeaveEvent beforeLeaveEvent) {
-	BeforeLeaveEvent.ContinueNavigationAction continueNavigationAction = beforeLeaveEvent.postpone();
-	dialog.open();
-//	beforeLeaveEvent.forwardTo(LoginView.class);
-	customDialogNativeButtonsInto(continueNavigationAction);
-  }
-}
-
-@Route("login")
-class LoginView extends VerticalLayout {
-  public LoginView() {
-	LoginOverlay component = new LoginOverlay();
-	H1 title = new H1();
-	Icon icon = VaadinIcon.VAADIN_H.create();
-	title.getStyle().set("color", "var(--lumo-base-color)");
-	icon.setSize("30px");
-	icon.getStyle().set("top", "-4px");
-	title.add(icon);
-	title.add(new Text(" My App"));
-	component.setTitle(title);
-	component.addLoginListener(e -> component.close());
-
-	LoginI18n i18n = LoginI18n.createDefault();
-	i18n.setAdditionalInformation("To close the login form submit non-empty username and password");
-	component.setI18n(i18n);
-
-	Button open = new Button("Open login overlay",
-		  e -> component.setOpened(true));
-
-	add(open, component, title, icon);
-  }
-}
-
 @Route(value = "app-layout-basic")
 @PageTitle("Basic App Layout")
 class BasicAppLayoutView extends AppLayout {
@@ -314,285 +94,227 @@ class BasicAppLayoutView extends AppLayout {
 	setContent(main);
   }
 }
-//@Route(value = "app")
-//class MainView extends VerticalLayout {
-//  private final CustomUserService userService;
-//  final Grid<User> grid;
-//
-//  public MainView(CustomUserService userService) {
-//	this.userService = userService;
-//	this.grid = new Grid<>(User.class);
-//	add(grid);
-//	listCustomers();
-//  }
-//
-//  private void listCustomers() {
-//	grid.setItems(userService.getAllUsers());
-//  }
-//}
 
-/**
- * configuration
- */
-//@Configuration
-//@EnableWebSecurity
-//@RequiredArgsConstructor
-//@EnableGlobalMethodSecurity(prePostEnabled = true)
-//class WebMvcUserDetailsServiceConfiguration extends WebSecurityConfigurerAdapter {
+@EnableWebSecurity
+@Configuration
+class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
-//  private final CustomUserService userService;
-//  private final PasswordEncoder passwordEncoder;
+  private static final String LOGIN_PROCESSING_URL = "/login";
+  private static final String LOGIN_FAILURE_URL = "/login?error";
+  private static final String LOGIN_URL = "/login";
+  private static final String LOGOUT_SUCCESS_URL = "/app-layout-basic";
 
-//  @Override
-//  protected void configure(HttpSecurity http) throws Exception {
-//	http
-//		  .csrf().disable()
-//		  .authorizeRequests()
-//		  .antMatchers("/app/**").hasAnyRole("ADMIN", "USER")
-//		  .anyRequest().authenticated()
-//		  .and()
-//		  .formLogin().disable();
-//	http.logout().invalidateHttpSession(true);
-//	http.addFilterAfter(developmentCasMockFilter(), LogoutFilter.class);
-//	http.addFilterBefore(singleLogoutFilter(), CasAuthenticationFilter.class);
-//	http.addFilter(casAuthenticationFilter());
-//	http.addFilterBefore(requestLogoutFilter(), LogoutFilter.class);
-//	http.sessionManagement().sessionAuthenticationStrategy(sessionAuthenticationStrategy());
-//		  .loginPage("/app/login")
-//		  .failureUrl("/app/login?error")
-//		  .loginProcessingUrl("/app-login")
-//		  .usernameParameter("userN")
-//		  .passwordParameter("userP")
-//		  .defaultSuccessUrl("/app").permitAll()
-//		  .and()
-//		  .logout()
-//		  .logoutUrl("/app-logout")
-//		  .logoutSuccessUrl("/app/logout").permitAll()
-//		  .and()
-//		  .exceptionHandling()
-//		  .accessDeniedPage("/app/error");
-//  }
+  private final UserDetailsService userDetailsService;
 
-//  @Override
-//  public void configure(WebSecurity web) throws Exception {
-//	web
-//		  .ignoring().antMatchers(
-//		  "/VAADIN/**",
-//		  "/favicon.ico",
-//		  "/robots.txt",
-//		  "/manifest.webmanifest",
-//		  "/sw.js",
-//		  "/offline-page.html",
-//		  "/frontend/**",
-//		  "/webjars/**",
-//		  "/frontend-es5/**", "/frontend-es6/**");
-//  }
+  @Autowired
+  private PasswordEncoder passwordEncoder;
 
-//  @Override
-//  protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-//	auth
-//		  .userDetailsService(userService)
-//		  .passwordEncoder(passwordEncoder);
-//  }
-//
-//  static boolean isUserLoggedIn() {
-//	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//	return authentication != null
-//		  && !(authentication instanceof AnonymousAuthenticationToken)
-//		  && authentication.isAuthenticated();
-//  }
-//}
+  @Autowired
+  public SecurityConfiguration(UserDetailsService userDetailsService) {
+	this.userDetailsService = userDetailsService;
+  }
 
-//@Component
-//class ConfiguredUIServiceInitListener implements VaadinServiceInitListener {
-//  @Override
-//  public void serviceInit(ServiceInitEvent event) {
-//	event.getSource().addUIInitListener(uiEvent -> {
-//	  final UI ui = uiEvent.getUI();
-//	  ui.addBeforeEnterListener(this::beforeEnter);
-//	});
-//  }
-//
-//  private void beforeEnter(BeforeEnterEvent event) {
-//	if (!LoginView.class.equals(event.getNavigationTarget()) && !SecurityUtils.isUserLoggedIn()) {
-//	  event.rerouteTo(LoginView.class);
-//	}
-//  }
-//}
+  /**
+   * The password encoder to use when encrypting passwords.
+   */
+  @Bean
+  public PasswordEncoder passwordEncoder() {
+	return new BCryptPasswordEncoder();
+  }
 
-/**
- * service
- */
-//@Service
-//@RequiredArgsConstructor
-//class CustomUserService/* implements UserDetailsService */ {
-//  private final UserRepository userRepository;
-//
-//  User getUserByUserName(String userName) {
-//	return userRepository.findByUserName(userName);
-//  }
-//
-//  List<User> getAllUsers() {
-//	return userRepository.findAll();
-//  }
-//
-//  List<User> getAllUsersByUserName(String userName) {
-//	return userRepository.findAllByUserName(userName);
-//  }
+  @Override
+  protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+	super.configure(auth);
+	auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder);
+  }
 
-//  @Override
-//  public UserDetails loadUserByUsername(String s) throws UsernameNotFoundException {
-//	User user = userRepository.findByUserName(s);
-//	if (null == user) {
-//	  throw new UsernameNotFoundException(s);
-//	}
-//	return new CustomUserPrincipal(user);
-//  }
-//}
+  @Override
+  protected void configure(HttpSecurity http) throws Exception {
+	http.csrf().disable()
+		  .requestCache().disable()
+		  .authorizeRequests()
+		  .requestMatchers(AnyRequestMatcher.INSTANCE).permitAll()
+		  .anyRequest().hasAnyAuthority("USER", "ADMIN")
+		  .and().formLogin().loginPage(LOGIN_URL).permitAll().loginProcessingUrl(LOGIN_PROCESSING_URL)
+		  .failureUrl(LOGIN_FAILURE_URL)
+		  .successHandler(new SavedRequestAwareAuthenticationSuccessHandler())
+		  .and().logout().logoutSuccessUrl(LOGOUT_SUCCESS_URL);
+  }
 
-/**
- * jpa - repository
- */
-@Repository
-interface CustomerRepository extends JpaRepository<Usr, Integer> {
-  @Query("from Usr c " +
-		"where concat(c.firstName, ' ', c.lastName, ' ', c.patronymic) " +
-		"like concat('%', :name, '%')")
-  List<Usr> findByName(@Param("name") String name);
+  @Override
+  public void configure(WebSecurity web) {
+	web.ignoring().antMatchers(
+		  "/VAADIN/**",
+		  "/favicon.ico",
+		  "/robots.txt",
+		  "/manifest.webmanifest",
+		  "/sw.js",
+		  "/offline-page.html",
+		  "/icons/**",
+		  "/images/**",
+		  "/frontend/**",
+		  "/webjars/**",
+		  "/h2-console/**",
+		  "/frontend-es5/**", "/frontend-es6/**");
+  }
 }
-//@Repository
-//interface UserRepository extends JpaRepository<User, Integer> {
-//  User findByUserName(String userName);
-//
-//  @Query("from User u where concat(u.userName) like concat('%', :userName, '%')")
-//  List<User> findAllByUserName(@Param("userName") String userName);
-//}
 
-/**
- * the Users wrapper
- */
-//@AllArgsConstructor
-//class CustomUserPrincipal implements UserDetails {
-//  private User user;
-//
-//  @Override
-//  public Collection<? extends GrantedAuthority> getAuthorities() {
-//	return user.getRoles();
-//  }
-//
-//  @Override
-//  public String getPassword() {
-//	return user.getPassword();
-//  }
-//
-//  @Override
-//  public String getUsername() {
-//	return user.getUserName();
-//  }
-//
-//  @Override
-//  public boolean isAccountNonExpired() {
-//	return true;
-//  }
-//
-//  @Override
-//  public boolean isAccountNonLocked() {
-//	return true;
-//  }
-//
-//  @Override
-//  public boolean isCredentialsNonExpired() {
-//	return true;
-//  }
-//
-//  @Override
-//  public boolean isEnabled() {
-//	return true;
-//  }
-//}
-
-/**
- * pojo
- */
-@Data
-@Entity
-@NoArgsConstructor
-class Usr {
-  @Id
-  @GeneratedValue
-  private Integer id;
-  private String firstName;
-  private String lastName;
-  private String patronymic;
+@Service
+@Primary
+class UserDetailsServiceImpl implements UserDetailsService {
+  @Override
+  public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+	return new org.springframework.security.core.userdetails.User("user", "password", Collections.singletonList(new SimpleGrantedAuthority("USER")));
+  }
 }
-//@Data
-//@Entity
-//@ToString
-//@EqualsAndHashCode
-//@Table(name = "usr")
-//class User{
-//  @Id
-//  @GeneratedValue(strategy = GenerationType.AUTO)
-//  @Column(name = "id")
-//  private Integer id;
-//
-//  @NotNull
-//  @NotBlank(message = "Username can't be null")
-//  @Column(nullable = false, name = "username", unique = true)
-//  private String userName;
-//
-//  @NotNull
-//  @NotBlank(message = "Password can't be null")
-//  @Column(nullable = false, name = "password")
-//  private String password;
 
-//  @Column(name = "roles")
-//  @Enumerated(EnumType.STRING)
-//  @ElementCollection(targetClass = Roles.class, fetch = FetchType.EAGER)
-//  @CollectionTable(name = "user_role", joinColumns = @JoinColumn(name = "user_id"))
-//  private Set<Roles> roles = new HashSet<Roles>(0);
-//}
+@Route
+@PageTitle("Vaadin Demo Bakery App")
+@JsModule("./styles/shared-styles.js")
+class LoginView extends LoginOverlay implements AfterNavigationObserver, BeforeEnterObserver {
 
-/**
- * roles
- */
-//enum Roles implements Serializable {
-//  USER, ADMIN;
-//}
+  public LoginView() {
+	LoginI18n i18n = LoginI18n.createDefault();
+	i18n.setHeader(new LoginI18n.Header());
+	i18n.getHeader().setTitle("Vaadin Demo Bakery App");
+	i18n.getHeader().setDescription(
+		  "admin@vaadin.com + admin\n" + "barista@vaadin.com + barista");
+	i18n.setAdditionalInformation(null);
+	i18n.setForm(new LoginI18n.Form());
+	i18n.getForm().setSubmit("Sign in");
+	i18n.getForm().setTitle("Sign in");
+	i18n.getForm().setUsername("Email");
+	i18n.getForm().setPassword("Password");
+	setI18n(i18n);
+	setForgotPasswordButtonVisible(false);
+	setAction("login");
+  }
 
-/**
- * data initialization
- */
-//@Slf4j
-//@Component
-//@RequiredArgsConstructor
-//class SimpleDataInitializer implements CommandLineRunner {
-//  private final UserRepository userRepository;
-//
-//  @Override
-//  public void run(String... args) throws Exception {
-//	Stream
-//		  .of(
-//				new User("user", "password", Collections.singleton(USER)),
-//				new User("admin", "password", Stream.of(USER, ADMIN).collect(Collectors.toSet()))
-//				new User("user", "password"),
-//				new User("admin", "password")
-//		  )
-//		  .forEachOrdered(userRepository::save);
+  @Override
+  public void beforeEnter(BeforeEnterEvent event) {
+	if (Helper.isUserLoggedIn()) {
+	  event.forwardTo(BasicAppLayoutView.class);
+	} else {
+	  setOpened(true);
+	}
+  }
 
-//	User[] users = new User[]{
-//		  new User("user", "password"),
-//	new User("admin", "password")
-//	};
-//
-//
-//	for(int i = 0; i < 2; i++) {
-//	  userRepository.save(users[i]);
-//	}
-//
-//	Stream
-//		  .of(userRepository.findAll())
-//		  .map(users -> users.toString() + "\n")
-//		  .forEachOrdered(log::info);
-//  }
-//}
+
+  @Override
+  public void afterNavigation(AfterNavigationEvent event) {
+	setError(
+		  event.getLocation().getQueryParameters().getParameters().containsKey(
+				"error"));
+  }
+}
+
+@SpringComponent
+class ConfigureUIServiceInitListener implements VaadinServiceInitListener {
+
+  @Override
+  public void serviceInit(ServiceInitEvent event) {
+	event.getSource().addUIInitListener(uiEvent -> {
+	  final UI ui = uiEvent.getUI();
+	  ui.add(new OfflineBanner());
+	  ui.addBeforeEnterListener(this::beforeEnter);
+	});
+  }
+
+  private void beforeEnter(BeforeEnterEvent event) {
+	final boolean accessGranted = Helper.isAccessGranted(event.getNavigationTarget());
+	if (!accessGranted) {
+	  if (Helper.isUserLoggedIn()) {
+		event.rerouteToError(AccessDeniedException.class);
+	  } else {
+		event.rerouteTo(LoginView.class);
+	  }
+	}
+  }
+}
+
+@Tag("offline-banner")
+@JsModule("./src/components/offline-banner.js")
+@NpmPackage(value="@polymer/iron-ajax", version = "3.0.1")
+class OfflineBanner extends Component {
+
+}
+
+@Tag("access-denied-view")
+@JsModule("./src/views/errors/access-denied-view.js")
+@ParentLayout(BasicAppLayoutView.class)
+@PageTitle("Access denied")
+class AccessDeniedView extends PolymerTemplate<TemplateModel> implements HasErrorParameter<AccessDeniedException> {
+
+  @Override
+  public int setErrorParameter(BeforeEnterEvent beforeEnterEvent, ErrorParameter<AccessDeniedException> errorParameter) {
+	return HttpServletResponse.SC_FORBIDDEN;
+  }
+}
+
+class AccessDeniedException extends RuntimeException {
+  public AccessDeniedException() {
+  }
+
+  public AccessDeniedException(String message) {
+	super(message);
+  }
+}
+
+class Helper {
+  public static boolean isUserLoggedIn() {
+	return isUserLoggedIn(SecurityContextHolder.getContext().getAuthentication());
+  }
+
+  private static boolean isUserLoggedIn(Authentication authentication) {
+	return authentication != null && !(authentication instanceof AnonymousAuthenticationToken);
+  }
+
+  public static boolean isAccessGranted(Class<?> securedClass) {
+	final boolean publicView = LoginView.class.equals(securedClass)
+		  || AccessDeniedView.class.equals(securedClass)
+		  || CustomRouteNotFoundError.class.equals(securedClass);
+
+	if (publicView) {
+	  return true;
+	}
+
+	Authentication userAuthentication = SecurityContextHolder.getContext().getAuthentication();
+
+	if (!isUserLoggedIn(userAuthentication)) {
+	  return false;
+	}
+
+	Secured secured = AnnotationUtils.findAnnotation(securedClass, Secured.class);
+	if (secured == null) {
+	  return true;
+	}
+
+	List<String> allowedRoles = Arrays.asList(secured.value());
+	return userAuthentication.getAuthorities().stream().map(GrantedAuthority::getAuthority)
+		  .anyMatch(allowedRoles::contains);
+  }
+
+  static boolean isFrameworkInternalRequest(HttpServletRequest request) {
+	final String parameterValue = request.getParameter(ApplicationConstants.REQUEST_TYPE_PARAMETER);
+	return parameterValue != null
+		  && Stream.of(HandlerHelper.RequestType.values()).anyMatch(r -> r.getIdentifier().equals(parameterValue));
+  }
+}
+
+@ParentLayout(BasicAppLayoutView.class)
+@PageTitle("Page was not found")
+@JsModule("./styles/shared-styles.js")
+class CustomRouteNotFoundError extends RouteNotFoundError {
+
+  public CustomRouteNotFoundError() {
+	RouterLink link = Component.from(
+		  ElementFactory.createRouterLink("", "Go to the front page."),
+		  RouterLink.class);
+	getElement().appendChild(new Text("Oops you hit a 404. ").getElement(), link.getElement());
+  }
+
+  @Override
+  public int setErrorParameter(BeforeEnterEvent event, ErrorParameter<NotFoundException> parameter) {
+	return HttpServletResponse.SC_NOT_FOUND;
+  }
+}
