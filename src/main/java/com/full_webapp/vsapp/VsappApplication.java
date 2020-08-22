@@ -1,8 +1,8 @@
 package com.full_webapp.vsapp;
 
+import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
-import lombok.*;
 import lombok.extern.java.Log;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,25 +15,16 @@ import javax.persistence.*;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static jdk.nashorn.internal.objects.NativeMath.log;
 
-/**
- * 	Hierarchy:
- *		-Main
- *		-Repository
- *		-Model
- *		-Type's
- */
 /*
-* 	Main
-*/
+ * 	Main
+ */
 @SpringBootApplication
 public class VsappApplication {
   public static void main(String[] args) {
@@ -41,49 +32,88 @@ public class VsappApplication {
   }
 }
 
-  /*
-  *   Init data's
-  */
-
-
 /*
-* 	UI
-*/
+ * 	UI
+ */
 @Route("")
+@Log
 class MainView extends VerticalLayout {
   private static final long serialVersionUID = 1L;
+  private final ContactRepository contactRepository;
+  private final Grid<Contact> grid = new Grid<>(Contact.class);
 
-  public MainView() { }
+  public MainView(ContactRepository contactRepository) {
+	this.contactRepository = contactRepository;
+	addClassName("list-view");
+	setSizeFull();
+	configureGrid();
+	add(grid);
+  }
 
+  private void configureGrid() {
+	grid.addClassName("contact-grid");
+	grid.setSizeFull();
+	grid.setItems(contactRepository.findAll());
+	grid.setColumns("firstName", "lastName", "email", "status");
+  }
 }
 
 /*
-* 	Repository
-*/
+ * 	Repository
+ */
 @Repository
-interface ContactRepository extends JpaRepository<Contact, Long> { }
+interface ContactRepository extends JpaRepository<Contact, Long> {
+}
+
 @Repository
-interface CompanyRepository extends JpaRepository<Company, Long> { }
+interface CompanyRepository extends JpaRepository<Company, Long> {
+}
 
 /*
-* 	Model
-*/
+ * 	Model
+ */
 @MappedSuperclass
-@EqualsAndHashCode
 abstract class AbstractEntity {
   @Id
-  @Getter
-  @GeneratedValue(strategy= GenerationType.SEQUENCE)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Long id;
+
+  public Long getId() {
+	return id;
+  }
 
   public boolean isPersisted() {
 	return id != null;
   }
+
+  @Override
+  public int hashCode() {
+	if (getId() != null) {
+	  return getId().hashCode();
+	}
+	return super.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+	if (this == obj) {
+	  return true;
+	}
+	if (obj == null) {
+	  return false;
+	}
+	if (getClass() != obj.getClass()) {
+	  return false;
+	}
+	AbstractEntity other = (AbstractEntity) obj;
+	if (getId() == null || other.getId() == null) {
+	  return false;
+	}
+	return getId().equals(other.getId());
+  }
 }
 
 @Entity
-@Data
-@ToString
 class Contact extends AbstractEntity implements Cloneable {
 
   public enum Status {
@@ -111,25 +141,83 @@ class Contact extends AbstractEntity implements Cloneable {
   @NotEmpty
   private String email = "";
 
+  public String getEmail() {
+	return email;
+  }
+
+  public void setEmail(String email) {
+	this.email = email;
+  }
+
+  public Status getStatus() {
+	return status;
+  }
+
+  public void setStatus(Status status) {
+	this.status = status;
+  }
+
+  public String getLastName() {
+	return lastName;
+  }
+
+  public void setLastName(String lastName) {
+	this.lastName = lastName;
+  }
+
+  public String getFirstName() {
+	return firstName;
+  }
+
+  public void setFirstName(String firstName) {
+	this.firstName = firstName;
+  }
+
+  public void setCompany(Company company) {
+	this.company = company;
+  }
+
+  public Company getCompany() {
+	return company;
+  }
+
+  @Override
+  public String toString() {
+	return firstName + " " + lastName;
+  }
+
 }
 
 @Entity
-@Data
-@NoArgsConstructor
 class Company extends AbstractEntity {
   private String name;
 
-  public Company(String name) {
-    this.name = name;
+  @OneToMany(mappedBy = "company", fetch = FetchType.EAGER)
+  private final List<Contact> employees = new LinkedList<>();
+
+  public Company() {
   }
 
-  @OneToMany(mappedBy = "company", fetch = FetchType.EAGER)
-  private List<Contact> employees = new LinkedList<>();
+  public Company(String name) {
+	setName(name);
+  }
+
+  public String getName() {
+	return name;
+  }
+
+  public void setName(String name) {
+	this.name = name;
+  }
+
+  public List<Contact> getEmployees() {
+	return employees;
+  }
 }
 
 /*
-* 	Service
-*/
+ * 	Service
+ */
 @Service
 class GreetService {
   public String greet(String name) {
@@ -175,9 +263,6 @@ class ContactService {
   @PostConstruct
   public void populateTestData() {
 
-	log.info("companyRepository -----------> " + companyRepository.toString());
-	log.info("contactRepository -----------> " + contactRepository.toString());
-
 	if (companyRepository.count() == 0) {
 	  companyRepository.saveAll(
 			Stream.of("Path-Way Electronics", "E-Tech Management", "Path-E-Tech Management")
@@ -212,5 +297,5 @@ class ContactService {
 }
 
 /*
-* 	Type's
-*/
+ * 	Type's
+ */
