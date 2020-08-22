@@ -40,7 +40,7 @@ public class VsappApplication {
 class MainView extends VerticalLayout {
   private static final long serialVersionUID = 1L;
   private final ContactRepository contactRepository;
-  private final Grid<Contact> grid = new Grid<>(Contact.class);
+  private final Grid<Contact> grid = new Grid<>();
 
   public MainView(ContactRepository contactRepository) {
 	this.contactRepository = contactRepository;
@@ -54,7 +54,13 @@ class MainView extends VerticalLayout {
 	grid.addClassName("contact-grid");
 	grid.setSizeFull();
 	grid.setItems(contactRepository.findAll());
-	grid.setColumns("firstName", "lastName", "email", "status");
+//	grid.setItems(Arrays.asList(contactRepository.getOne(1L), contactRepository.getOne(2L))); // <--- Error: No Session
+//	grid.setColumns("firstName", "lastName", "email", "status"); // <--- Error: IllegalStateException ... cannot access with mod. 'public'
+
+	grid.addColumn(Contact::getFirstName).setHeader("First Name").setSortable(true);
+	grid.addColumn(Contact::getLastName).setHeader("Last Name").setSortable(true);
+	grid.addColumn(Contact::getEmail).setHeader("Email").setSortable(true);
+	grid.addColumn(Contact::getStatus).setHeader("Status").setSortable(true);
   }
 }
 
@@ -85,6 +91,8 @@ abstract class AbstractEntity {
   public boolean isPersisted() {
 	return id != null;
   }
+
+  public AbstractEntity(){}
 
   @Override
   public int hashCode() {
@@ -140,6 +148,8 @@ class Contact extends AbstractEntity implements Cloneable {
   @NotNull
   @NotEmpty
   private String email = "";
+
+  public Contact(){}
 
   public String getEmail() {
 	return email;
