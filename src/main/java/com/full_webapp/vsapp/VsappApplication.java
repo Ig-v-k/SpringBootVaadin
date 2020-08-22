@@ -1,23 +1,26 @@
 package com.full_webapp.vsapp;
 
-import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.server.PWA;
 import lombok.*;
 import lombok.extern.java.Log;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import javax.persistence.*;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static jdk.nashorn.internal.objects.NativeMath.log;
 
@@ -47,9 +50,6 @@ public class VsappApplication {
 * 	UI
 */
 @Route("")
-@PWA(name = "Vaadin Application", shortName = "Vaadin App", description = "This is an example Vaadin application.", enableInstallPrompt = true)
-@CssImport("./styles/shared-styles.css")
-@CssImport(value = "./styles/vaadin-text-field-styles.css", themeFor = "vaadin-text-field")
 class MainView extends VerticalLayout {
   private static final long serialVersionUID = 1L;
 
@@ -60,16 +60,14 @@ class MainView extends VerticalLayout {
 /*
 * 	Repository
 */
-interface ContactRepository extends JpaRepository<Contact, Long> {
-
-}
-interface CompanyRepository extends JpaRepository<Company, Long> {
-}
+@Repository
+interface ContactRepository extends JpaRepository<Contact, Long> { }
+@Repository
+interface CompanyRepository extends JpaRepository<Company, Long> { }
 
 /*
 * 	Model
 */
-
 @MappedSuperclass
 @EqualsAndHashCode
 abstract class AbstractEntity {
@@ -121,6 +119,10 @@ class Contact extends AbstractEntity implements Cloneable {
 class Company extends AbstractEntity {
   private String name;
 
+  public Company(String name) {
+    this.name = name;
+  }
+
   @OneToMany(mappedBy = "company", fetch = FetchType.EAGER)
   private List<Contact> employees = new LinkedList<>();
 }
@@ -141,10 +143,14 @@ class GreetService {
 
 @Log
 @Service
-@RequiredArgsConstructor
 class ContactService {
-  private ContactRepository contactRepository;
-  private CompanyRepository companyRepository;
+  private final ContactRepository contactRepository;
+  private final CompanyRepository companyRepository;
+
+  ContactService(ContactRepository contactRepository, CompanyRepository companyRepository) {
+	this.contactRepository = contactRepository;
+	this.companyRepository = companyRepository;
+  }
 
   public List<Contact> findAll() {
 	return contactRepository.findAll();
@@ -168,6 +174,10 @@ class ContactService {
 
   @PostConstruct
   public void populateTestData() {
+
+	log.info("companyRepository -----------> " + companyRepository.toString());
+	log.info("contactRepository -----------> " + contactRepository.toString());
+
 	if (companyRepository.count() == 0) {
 	  companyRepository.saveAll(
 			Stream.of("Path-Way Electronics", "E-Tech Management", "Path-E-Tech Management")
