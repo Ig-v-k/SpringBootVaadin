@@ -2,11 +2,15 @@ package com.full_webapp.vsapp;
 
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
 import lombok.extern.java.Log;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +19,9 @@ import javax.persistence.*;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -39,21 +45,26 @@ public class VsappApplication {
 @Log
 class MainView extends VerticalLayout {
   private static final long serialVersionUID = 1L;
-  private final ContactRepository contactRepository;
-  private final Grid<Contact> grid = new Grid<>();
+  private final ContactService contactService;
 
-  public MainView(ContactRepository contactRepository) {
-	this.contactRepository = contactRepository;
+  private final Grid<Contact> grid = new Grid<>();
+  private final TextField filterText = new TextField();
+
+  public MainView(ContactService contactService) {
+	this.contactService = contactService;
 	addClassName("list-view");
 	setSizeFull();
+	configureFilter();
 	configureGrid();
-	add(grid);
+
+	add(filterText, grid);
+	updateList();
   }
 
   private void configureGrid() {
 	grid.addClassName("contact-grid");
 	grid.setSizeFull();
-	grid.setItems(contactRepository.findAll());
+//	grid.setItems(contactService.findAll());
 //	grid.setItems(Arrays.asList(contactRepository.getOne(1L), contactRepository.getOne(2L))); // <--- Error: No Session
 //	grid.setColumns("firstName", "lastName", "email", "status"); // <--- Error: IllegalStateException ... cannot access with mod. 'public'
 
@@ -61,6 +72,25 @@ class MainView extends VerticalLayout {
 	grid.addColumn(Contact::getLastName).setHeader("Last Name").setSortable(true);
 	grid.addColumn(Contact::getEmail).setHeader("Email").setSortable(true);
 	grid.addColumn(Contact::getStatus).setHeader("Status").setSortable(true);
+
+//	grid.removeColumnByKey("company");
+	grid.addColumn(contact -> {
+	  Company company = contact.getCompany();
+	  return company == null ? "-" : company.getName();
+	}).setHeader("Company");
+
+	grid.getColumns().forEach(contactColumn -> contactColumn.setAutoWidth(true));
+  }
+
+  private void configureFilter() {
+	filterText.setPlaceholder("Filter by name...");
+	filterText.setClearButtonVisible(true);
+	filterText.setValueChangeMode(ValueChangeMode.LAZY);
+	filterText.addValueChangeListener(e -> updateList());
+  }
+
+  private void updateList() {
+	grid.setItems(contactService.findAll(filterText.getValue()));
   }
 }
 
@@ -69,6 +99,10 @@ class MainView extends VerticalLayout {
  */
 @Repository
 interface ContactRepository extends JpaRepository<Contact, Long> {
+  @Query("select c from Contact c " +
+		"where lower(c.firstName) like lower(concat('%', :searchTerm, '%')) " +
+		"or lower(c.lastName) like lower(concat('%', :searchTerm, '%'))") //
+  List<Contact> search(@Param("searchTerm") String searchTerm);
 }
 
 @Repository
@@ -239,6 +273,21 @@ class GreetService {
   }
 }
 
+@Service
+class CompanyService {
+
+  private final CompanyRepository companyRepository;
+
+  public CompanyService(CompanyRepository companyRepository) {
+	this.companyRepository = companyRepository;
+  }
+
+  public List<Company> findAll() {
+	return companyRepository.findAll();
+  }
+
+}
+
 @Log
 @Service
 class ContactService {
@@ -252,6 +301,14 @@ class ContactService {
 
   public List<Contact> findAll() {
 	return contactRepository.findAll();
+  }
+
+  public List<Contact> findAll(String filterText) {
+	if(filterText == null || filterText.isEmpty()) {
+	  return contactRepository.findAll();
+	} else  {
+	  return  contactRepository.search(filterText);
+	}
   }
 
   public long count() {
