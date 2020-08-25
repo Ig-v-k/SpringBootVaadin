@@ -1,7 +1,16 @@
 package com.full_webapp.vsapp;
 
+import com.vaadin.flow.component.Key;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dependency.CssImport;
+import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
@@ -41,8 +50,9 @@ public class VsappApplication {
 /*
  * 	UI
  */
-@Route("")
 @Log
+@Route("")
+@CssImport("./styles/shared-styles.css")
 class MainView extends VerticalLayout {
   private static final long serialVersionUID = 1L;
   private final ContactService contactService;
@@ -54,10 +64,17 @@ class MainView extends VerticalLayout {
 	this.contactService = contactService;
 	addClassName("list-view");
 	setSizeFull();
+
 	configureFilter();
 	configureGrid();
 
-	add(filterText, grid);
+	ContactForm form = new ContactForm();
+
+	Div content = new Div(grid, form);
+	content.addClassName("content");
+	content.setSizeFull();
+
+	add(filterText, content);
 	updateList();
   }
 
@@ -94,6 +111,40 @@ class MainView extends VerticalLayout {
   }
 }
 
+class ContactForm extends FormLayout {
+
+  TextField firstName = new TextField("First name");
+  TextField lastName = new TextField("Last name");
+  EmailField email = new EmailField("Email");
+  ComboBox<Contact.Status> status = new ComboBox<>("Status");
+  ComboBox<Company> company = new ComboBox<>("Company");
+
+  Button save = new Button("Save");
+  Button delete = new Button("Delete");
+  Button close = new Button("Cancel");
+
+  public ContactForm() {
+	addClassName("contact-form");
+	add(firstName,
+		  lastName,
+		  email,
+		  company,
+		  status,
+		  createButtonsLayout());
+  }
+
+  private HorizontalLayout createButtonsLayout() {
+	save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+	delete.addThemeVariants(ButtonVariant.LUMO_ERROR);
+	close.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+
+	save.addClickShortcut(Key.ENTER);
+	close.addClickShortcut(Key.ESCAPE);
+
+	return new HorizontalLayout(save, delete, close);
+  }
+}
+
 /*
  * 	Repository
  */
@@ -101,7 +152,7 @@ class MainView extends VerticalLayout {
 interface ContactRepository extends JpaRepository<Contact, Long> {
   @Query("select c from Contact c " +
 		"where lower(c.firstName) like lower(concat('%', :searchTerm, '%')) " +
-		"or lower(c.lastName) like lower(concat('%', :searchTerm, '%'))") //
+		"or lower(c.lastName) like lower(concat('%', :searchTerm, '%'))")
   List<Contact> search(@Param("searchTerm") String searchTerm);
 }
 
