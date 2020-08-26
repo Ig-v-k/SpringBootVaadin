@@ -22,6 +22,8 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import lombok.extern.java.Log;
+import org.hibernate.validator.constraints.Email;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -32,8 +34,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.persistence.*;
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.LinkedList;
 import java.util.List;
@@ -62,12 +62,12 @@ public class VsappApplication {
 @CssImport("./styles/shared-styles.css")
 class MainView extends VerticalLayout {
   private static final long serialVersionUID = 1L;
-
   private final ContactService contactService;
 
-  private final ContactForm contactForm;
+  private final ContactForm form;
   private final Grid<Contact> grid = new Grid<>();
   private final TextField filterText = new TextField();
+
 
   public MainView(ContactService contactService, CompanyService companyService) {
 	this.contactService = contactService;
@@ -77,9 +77,9 @@ class MainView extends VerticalLayout {
 	configureFilter();
 	configureGrid();
 
-	contactForm = new ContactForm(companyService.findAll());
+	form = new ContactForm(companyService.findAll());
 
-	Div content = new Div(grid, contactForm);
+	Div content = new Div(grid, form);
 	content.addClassName("content");
 	content.setSizeFull();
 
@@ -143,8 +143,7 @@ class ContactForm extends FormLayout {
 	company.setItems(companies);
 	company.setItemLabelGenerator(Company::getName);
 
-	add(firstName, lastName, email, status, company, createButtonsLayout()
-	);
+	add(firstName, lastName, email, status, company, createButtonsLayout());
   }
 
   public void setContact(Contact contact) {
@@ -170,7 +169,6 @@ class ContactForm extends FormLayout {
   }
 
   private void validateAndSave() {
-
 	try {
 	  binder.writeBean(contact);
 	  fireEvent(new SaveEvent(this, contact));
@@ -179,8 +177,9 @@ class ContactForm extends FormLayout {
 	}
   }
 
+  // Events
   public static abstract class ContactFormEvent extends ComponentEvent<ContactForm> {
-	private final Contact contact;
+	private Contact contact;
 
 	protected ContactFormEvent(ContactForm source, Contact contact) {
 	  super(source, false);
@@ -249,8 +248,7 @@ abstract class AbstractEntity {
 	return id != null;
   }
 
-  public AbstractEntity() {
-  }
+  public AbstractEntity(){}
 
   @Override
   public int hashCode() {
@@ -307,8 +305,7 @@ class Contact extends AbstractEntity implements Cloneable {
   @NotEmpty
   private String email = "";
 
-  public Contact() {
-  }
+  public Contact(){}
 
   public String getEmail() {
 	return email;
@@ -429,10 +426,10 @@ class ContactService {
   }
 
   public List<Contact> findAll(String filterText) {
-	if (filterText == null || filterText.isEmpty()) {
+	if(filterText == null || filterText.isEmpty()) {
 	  return contactRepository.findAll();
-	} else {
-	  return contactRepository.search(filterText);
+	} else  {
+	  return  contactRepository.search(filterText);
 	}
   }
 
