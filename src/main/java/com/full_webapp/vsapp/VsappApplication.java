@@ -68,7 +68,6 @@ class MainView extends VerticalLayout {
   private final Grid<Contact> grid = new Grid<>();
   private final TextField filterText = new TextField();
 
-
   public MainView(ContactService contactService, CompanyService companyService) {
 	this.contactService = contactService;
 	addClassName("list-view");
@@ -78,6 +77,9 @@ class MainView extends VerticalLayout {
 	configureGrid();
 
 	form = new ContactForm(companyService.findAll());
+	form.addListener(ContactForm.SaveEvent.class, this::saveContact);
+	form.addListener(ContactForm.DeleteEvent.class, this::deleteContact);
+	form.addListener(ContactForm.CloseEvent.class, e -> closeEditor());
 
 	Div content = new Div(grid, form);
 	content.addClassName("content");
@@ -85,6 +87,25 @@ class MainView extends VerticalLayout {
 
 	add(filterText, content);
 	updateList();
+	closeEditor();
+  }
+
+  private void saveContact(ContactForm.SaveEvent event) {
+	contactService.save(event.getContact());
+	updateList();
+	closeEditor();
+  }
+
+  private void deleteContact(ContactForm.DeleteEvent event) {
+	contactService.delete(event.getContact());
+	updateList();
+	closeEditor();
+  }
+
+  private void closeEditor() {
+	form.setContact(null);
+	form.setVisible(false);
+	removeClassName("editing");
   }
 
   private void configureGrid() {
@@ -106,6 +127,19 @@ class MainView extends VerticalLayout {
 	}).setHeader("Company");
 
 	grid.getColumns().forEach(contactColumn -> contactColumn.setAutoWidth(true));
+
+	grid.asSingleSelect().addValueChangeListener(event ->
+		  editContact(event.getValue()));
+  }
+
+  private void editContact(Contact value) {
+	if (null == value)
+	  closeEditor();
+	else {
+	  form.setContact(value);
+	  form.setVisible(true);
+	  addClassName("editing");
+	}
   }
 
   private void configureFilter() {
