@@ -61,20 +61,20 @@ public class VsappApplication {
 @Route("")
 @CssImport("./styles/shared-styles.css")
 class MainView extends VerticalLayout {
-  private static final long serialVersionUID = 1L;
-  private final ContactService contactService;
 
   private final ContactForm form;
-  private final Grid<Contact> grid = new Grid<>();
-  private final TextField filterText = new TextField();
+  Grid<Contact> grid = new Grid<>(Contact.class);
+  TextField filterText = new TextField();
 
-  public MainView(ContactService contactService, CompanyService companyService) {
+  private ContactService contactService;
+
+  public MainView(ContactService contactService,
+				  CompanyService companyService) {
 	this.contactService = contactService;
 	addClassName("list-view");
 	setSizeFull();
-
-	configureFilter();
 	configureGrid();
+
 
 	form = new ContactForm(companyService.findAll());
 	form.addListener(ContactForm.SaveEvent.class, this::saveContact);
@@ -85,21 +85,64 @@ class MainView extends VerticalLayout {
 	content.addClassName("content");
 	content.setSizeFull();
 
-	add(filterText, content);
+	add(getToolBar(), content);
 	updateList();
 	closeEditor();
   }
 
-  private void saveContact(ContactForm.SaveEvent event) {
-	contactService.save(event.getContact());
+  private void deleteContact(ContactForm.DeleteEvent evt) {
+	contactService.delete(evt.getContact());
 	updateList();
 	closeEditor();
   }
 
-  private void deleteContact(ContactForm.DeleteEvent event) {
-	contactService.delete(event.getContact());
+  private void saveContact(ContactForm.SaveEvent evt) {
+	contactService.save(evt.getContact());
 	updateList();
 	closeEditor();
+  }
+
+  private HorizontalLayout getToolBar() {
+	filterText.setPlaceholder("Filter by name...");
+	filterText.setClearButtonVisible(true);
+	filterText.setValueChangeMode(ValueChangeMode.LAZY);
+	filterText.addValueChangeListener(e -> updateList());
+
+	Button addContactButton = new Button("Add contact", click -> addContact());
+
+	HorizontalLayout toolbar = new HorizontalLayout(filterText, addContactButton);
+	toolbar.addClassName("toolbar");
+	return toolbar;
+  }
+
+  private void addContact() {
+	grid.asSingleSelect().clear();
+	editContact(new Contact());
+  }
+
+  private void configureGrid() {
+	grid.addClassName("contact-grid");
+	grid.setSizeFull();
+	grid.removeColumnByKey("company");
+	grid.setColumns("firstName", "lastName", "email", "status");
+	grid.addColumn(contact -> {
+	  Company company = contact.getCompany();
+	  return company == null ? "-" : company.getName();
+	}).setHeader("Company");
+
+	grid.getColumns().forEach(col -> col.setAutoWidth(true));
+
+	grid.asSingleSelect().addValueChangeListener(evt -> editContact(evt.getValue()));
+  }
+
+  private void editContact(Contact contact) {
+	if (contact == null) {
+	  closeEditor();
+	} else {
+	  form.setContact(contact);
+	  form.setVisible(true);
+	  addClassName("editing");
+	}
   }
 
   private void closeEditor() {
@@ -108,50 +151,10 @@ class MainView extends VerticalLayout {
 	removeClassName("editing");
   }
 
-  private void configureGrid() {
-	grid.addClassName("contact-grid");
-	grid.setSizeFull();
-//	grid.setItems(contactService.findAll());
-//	grid.setItems(Arrays.asList(contactRepository.getOne(1L), contactRepository.getOne(2L))); // <--- Error: No Session
-//	grid.setColumns("firstName", "lastName", "email", "status"); // <--- Error: IllegalStateException ... cannot access with mod. 'public'
-
-	grid.addColumn(Contact::getFirstName).setHeader("First Name").setSortable(true);
-	grid.addColumn(Contact::getLastName).setHeader("Last Name").setSortable(true);
-	grid.addColumn(Contact::getEmail).setHeader("Email").setSortable(true);
-	grid.addColumn(Contact::getStatus).setHeader("Status").setSortable(true);
-
-//	grid.removeColumnByKey("company");
-	grid.addColumn(contact -> {
-	  Company company = contact.getCompany();
-	  return company == null ? "-" : company.getName();
-	}).setHeader("Company");
-
-	grid.getColumns().forEach(contactColumn -> contactColumn.setAutoWidth(true));
-
-	grid.asSingleSelect().addValueChangeListener(event ->
-		  editContact(event.getValue()));
-  }
-
-  private void editContact(Contact value) {
-	if (null == value)
-	  closeEditor();
-	else {
-	  form.setContact(value);
-	  form.setVisible(true);
-	  addClassName("editing");
-	}
-  }
-
-  private void configureFilter() {
-	filterText.setPlaceholder("Filter by name...");
-	filterText.setClearButtonVisible(true);
-	filterText.setValueChangeMode(ValueChangeMode.LAZY);
-	filterText.addValueChangeListener(e -> updateList());
-  }
-
   private void updateList() {
 	grid.setItems(contactService.findAll(filterText.getValue()));
   }
+
 }
 
 class ContactForm extends FormLayout {
