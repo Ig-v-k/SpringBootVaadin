@@ -22,8 +22,6 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 import lombok.extern.java.Log;
-import org.hibernate.validator.constraints.Email;
-import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -34,7 +32,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.persistence.*;
-import javax.validation.constraints.NotNull;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -180,7 +177,8 @@ class ContactForm extends FormLayout {
 	company.setItems(companies);
 	company.setItemLabelGenerator(Company::getName);
 
-	add(firstName, lastName, email, status, company, createButtonsLayout());
+	add(firstName, lastName, email, status, company, createButtonsLayout()
+	);
   }
 
   public void setContact(Contact contact) {
@@ -238,7 +236,6 @@ class ContactForm extends FormLayout {
 	DeleteEvent(ContactForm source, Contact contact) {
 	  super(source, contact);
 	}
-
   }
 
   public static class CloseEvent extends ContactFormEvent {
@@ -247,8 +244,7 @@ class ContactForm extends FormLayout {
 	}
   }
 
-  public <T extends ComponentEvent<?>> Registration addListener(Class<T> eventType,
-																ComponentEventListener<T> listener) {
+  public <T extends ComponentEvent<?>> Registration addListener(Class<T> eventType, ComponentEventListener<T> listener) {
 	return getEventBus().addListener(eventType, listener);
   }
 }
@@ -321,12 +317,12 @@ class Contact extends AbstractEntity implements Cloneable {
 	ImportedLead, NotContacted, Contacted, Customer, ClosedLost
   }
 
-  @NotNull
-  @NotEmpty
+//  @NotNull
+//  @NotEmpty
   private String firstName = "";
 
-  @NotNull
-  @NotEmpty
+//  @NotNull
+//  @NotEmpty
   private String lastName = "";
 
   @ManyToOne
@@ -334,12 +330,12 @@ class Contact extends AbstractEntity implements Cloneable {
   private Company company;
 
   @Enumerated(EnumType.STRING)
-  @NotNull
+//  @NotNull
   private Contact.Status status;
 
-  @Email
-  @NotNull
-  @NotEmpty
+//  @Email
+//  @NotNull
+//  @NotEmpty
   private String email = "";
 
   public Contact(){}
