@@ -4,13 +4,19 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentEvent;
 import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.Key;
+import com.vaadin.flow.component.applayout.AppLayout;
+import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.login.LoginForm;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
@@ -19,19 +25,40 @@ import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.data.value.ValueChangeMode;
-import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.*;
+import com.vaadin.flow.server.PWA;
+import com.vaadin.flow.server.ServiceInitEvent;
+import com.vaadin.flow.server.ServletHelper;
+import com.vaadin.flow.server.VaadinServiceInitListener;
+import com.vaadin.flow.shared.ApplicationConstants;
 import com.vaadin.flow.shared.Registration;
 import lombok.extern.java.Log;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.persistence.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -51,10 +78,74 @@ public class VsappApplication {
 /*
  * 	UI
  */
-@Log
-@Route("")
 @CssImport("./styles/shared-styles.css")
-class MainView extends VerticalLayout {
+@PWA(
+	  name = "Vaadin-Kenrice",
+	  shortName = "kenrice",
+	  offlineResources = {
+			"static/offline-styles.css",
+			"./images/offline.png"})
+class MainLayout extends AppLayout {
+  public MainLayout() {
+	createHeader();
+	createDrawer();
+  }
+
+  private void createHeader() {
+	H1 logo = new H1("Kenrice");
+	logo.addClassName("logo");
+
+	Anchor logout = new Anchor("logout", "Log out");
+
+	HorizontalLayout header = new HorizontalLayout(new DrawerToggle(), logo, logout);
+
+	header.expand(logo);
+	header.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
+	header.setWidth("100%");
+	header.addClassName("header");
+
+	addToNavbar(header);
+  }
+
+  private void createDrawer() {
+	RouterLink listLink = new RouterLink("data-list", ListView.class);
+	listLink.setHighlightCondition(HighlightConditions.sameLocation());
+
+	addToDrawer(new VerticalLayout(listLink));
+  }
+}
+
+@Route("login")
+@PageTitle("login-page")
+class LoginView extends VerticalLayout implements BeforeEnterObserver {
+  private final LoginForm login = new LoginForm();
+
+  public LoginView() {
+	addClassName("login-view");
+	setSizeFull();
+	setAlignItems(Alignment.CENTER);
+	setJustifyContentMode(JustifyContentMode.CENTER);
+
+	login.setAction("login");
+
+	add(new H1("Vaadin CRM"), login);
+  }
+
+  @Override
+  public void beforeEnter(BeforeEnterEvent beforeEnterEvent) {
+	if (beforeEnterEvent.getLocation()
+		  .getQueryParameters()
+		  .getParameters()
+		  .containsKey("error")) {
+	  login.setError(true);
+	}
+  }
+}
+
+@Log
+@Route(value = "", layout = MainLayout.class)
+@PageTitle("contacts-page")
+class ListView extends VerticalLayout {
 
   ContactForm form;
   Grid<Contact> grid = new Grid<>();
@@ -62,7 +153,7 @@ class MainView extends VerticalLayout {
 
   private final ContactService contactService;
 
-  public MainView(ContactService contactService, CompanyService companyService) {
+  public ListView(ContactService contactService, CompanyService companyService) {
 	this.contactService = contactService;
 	addClassName("list-view");
 	setSizeFull();
@@ -73,7 +164,7 @@ class MainView extends VerticalLayout {
 	form.addListener(ContactForm.DeleteEvent.class, this::deleteContact);
 	form.addListener(ContactForm.CloseEvent.class, e -> closeEditor());
 
-	Div content = new Div(grid, form);
+	Div content = new Div(form, grid);
 	content.addClassName("content");
 	content.setSizeFull();
 
@@ -189,19 +280,15 @@ class ContactForm extends FormLayout {
 	binder
 		  .forField(firstName)
 		  .bind(Contact::getFirstName, Contact::setFirstName);
-
 	binder
 		  .forField(lastName)
 		  .bind(Contact::getLastName, Contact::setLastName);
-
 	binder
 		  .forField(email)
 		  .bind(Contact::getEmail, Contact::setEmail);
-
 	binder
 		  .forField(status)
 		  .bind(Contact::getStatus, Contact::setStatus);
-
 	binder
 		  .forField(company)
 		  .bind(Contact::getCompany, Contact::setCompany);
@@ -288,6 +375,100 @@ interface CompanyRepository extends JpaRepository<Company, Long> {
 }
 
 /*
+ * 	Security
+ */
+@EnableWebSecurity
+@Configuration
+class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+  private static final String LOGIN_PROCESSING_URL = "/login";
+  private static final String LOGIN_FAILURE_URL = "/login?error";
+  private static final String LOGIN_URL = "/login";
+  private static final String LOGOUT_SUCCESS_URL = "/login";
+
+  @Override
+  protected void configure(HttpSecurity http) throws Exception {
+	http.csrf().disable()
+		  .requestCache().requestCache(new CustomRequestCache())
+		  .and().authorizeRequests()
+		  .requestMatchers(SecurityUtils::isFrameworkInternalRequest).permitAll()
+		  .anyRequest().authenticated()
+		  .and().formLogin()
+		  .loginPage(LOGIN_URL).permitAll()
+		  .loginProcessingUrl(LOGIN_PROCESSING_URL)
+		  .failureUrl(LOGIN_FAILURE_URL)
+		  .and().logout().logoutSuccessUrl(LOGOUT_SUCCESS_URL);
+  }
+
+  @Bean
+  @Override
+  public UserDetailsService userDetailsService() {
+	UserDetails user = User.withUsername("user").password("{noop}password").roles("USER").build();
+
+	return new InMemoryUserDetailsManager(user);
+  }
+
+  @Override
+  public void configure(WebSecurity web) {
+	web.ignoring().antMatchers(
+		  "/VAADIN/**",
+		  "/favicon.ico",
+		  "/robots.txt",
+		  "/manifest.webmanifest",
+		  "/sw.js",
+		  "/offline.html",
+		  "/icons/**",
+		  "/images/**",
+		  "/styles/**",
+		  "/h2-console/**",
+		  "/static/**");
+  }
+}
+
+final class SecurityUtils {
+  private SecurityUtils() {
+  }
+
+  static boolean isFrameworkInternalRequest(HttpServletRequest request) {
+	final String parameterValue = request.getParameter(ApplicationConstants.REQUEST_TYPE_PARAMETER);
+	return parameterValue != null && Stream.of(ServletHelper.RequestType.values()).anyMatch(r -> r.getIdentifier().equals(parameterValue));
+  }
+
+  static boolean isUserLoggedIn() {
+	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+	return authentication != null
+		  && !(authentication instanceof AnonymousAuthenticationToken)
+		  && authentication.isAuthenticated();
+  }
+}
+
+class CustomRequestCache extends HttpSessionRequestCache {
+  @Override
+  public void saveRequest(HttpServletRequest request, HttpServletResponse response) {
+	if (!SecurityUtils.isFrameworkInternalRequest(request)) {
+	  super.saveRequest(request, response);
+	}
+  }
+}
+
+/*
+ *	Components
+ */
+@org.springframework.stereotype.Component
+class ConfigureUIServiceInitListener implements VaadinServiceInitListener {
+
+  @Override
+  public void serviceInit(ServiceInitEvent event) {
+	event.getSource().addUIInitListener(uiEvent -> uiEvent.getUI().addBeforeEnterListener(this::authenticateNavigation));
+  }
+
+  private void authenticateNavigation(BeforeEnterEvent event) {
+	if (!LoginView.class.equals(event.getNavigationTarget()) && !SecurityUtils.isUserLoggedIn()) {
+	  event.rerouteTo(LoginView.class);
+	}
+  }
+}
+
+/*
  * 	Model
  */
 @MappedSuperclass
@@ -338,11 +519,11 @@ class Contact extends AbstractEntity implements Cloneable {
 	ImportedLead, NotContacted, Contacted, Customer, ClosedLost
   }
 
-//  @NotNull
+  //  @NotNull
 //  @NotEmpty
   private String firstName = "";
 
-//  @NotNull
+  //  @NotNull
 //  @NotEmpty
   private String lastName = "";
 
@@ -354,7 +535,7 @@ class Contact extends AbstractEntity implements Cloneable {
 //  @NotNull
   private Contact.Status status;
 
-//  @Email
+  //  @Email
 //  @NotNull
 //  @NotEmpty
   private String email = "";
@@ -486,10 +667,10 @@ class ContactService {
   }
 
   public List<Contact> findAll(String filterText) {
-	if(filterText == null || filterText.isEmpty()) {
+	if (filterText == null || filterText.isEmpty()) {
 	  return contactRepository.findAll();
-	} else  {
-	  return  contactRepository.search(filterText);
+	} else {
+	  return contactRepository.search(filterText);
 	}
   }
 
@@ -526,9 +707,6 @@ class ContactService {
 			Stream.of("Gabrielle Patel", "Brian Robinson", "Eduardo Haugen",
 				  "Koen Johansen", "Alejandro Macdonald", "Angel Karlsson", "Yahir Gustavsson", "Haiden Svensson",
 				  "Emily Stewart", "Corinne Davis", "Ryann Davis", "Yurem Jackson", "Kelly Gustavsson",
-				  "Eileen Walker", "Katelyn Martin", "Israel Carlsson", "Quinn Hansson", "Makena Smith",
-				  "Danielle Watson", "Leland Harris", "Gunner Karlsen", "Jamar Olsson", "Lara Martin",
-				  "Ann Andersson", "Remington Andersson", "Rene Carlsson", "Elvis Olsen", "Solomon Olsen",
 				  "Jaydan Jackson", "Bernard Nilsen")
 				  .map(name -> {
 					String[] split = name.split(" ");
