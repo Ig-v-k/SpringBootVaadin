@@ -32,14 +32,11 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.persistence.*;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static jdk.nashorn.internal.objects.NativeMath.log;
 
 /*
  * 	Main
@@ -59,19 +56,17 @@ public class VsappApplication {
 @CssImport("./styles/shared-styles.css")
 class MainView extends VerticalLayout {
 
-  private final ContactForm form;
-  Grid<Contact> grid = new Grid<>(Contact.class);
+  ContactForm form;
+  Grid<Contact> grid = new Grid<>();
   TextField filterText = new TextField();
 
-  private ContactService contactService;
+  private final ContactService contactService;
 
-  public MainView(ContactService contactService,
-				  CompanyService companyService) {
+  public MainView(ContactService contactService, CompanyService companyService) {
 	this.contactService = contactService;
 	addClassName("list-view");
 	setSizeFull();
 	configureGrid();
-
 
 	form = new ContactForm(companyService.findAll());
 	form.addListener(ContactForm.SaveEvent.class, this::saveContact);
@@ -118,16 +113,25 @@ class MainView extends VerticalLayout {
   }
 
   private void configureGrid() {
+
 	grid.addClassName("contact-grid");
 	grid.setSizeFull();
-	grid.removeColumnByKey("company");
-	grid.setColumns("firstName", "lastName", "email", "status");
+//	grid.setItems(contactService.findAll());
+//	grid.setItems(Arrays.asList(contactRepository.getOne(1L), contactRepository.getOne(2L))); // <--- Error: No Session
+//	grid.setColumns("firstName", "lastName", "email", "status"); // <--- Error: IllegalStateException ... cannot access with mod. 'public'
+
+	grid.addColumn(Contact::getFirstName).setHeader("First Name").setSortable(true);
+	grid.addColumn(Contact::getLastName).setHeader("Last Name").setSortable(true);
+	grid.addColumn(Contact::getEmail).setHeader("Email").setSortable(true);
+	grid.addColumn(Contact::getStatus).setHeader("Status").setSortable(true);
+
+//	grid.removeColumnByKey("company");
 	grid.addColumn(contact -> {
 	  Company company = contact.getCompany();
 	  return company == null ? "-" : company.getName();
 	}).setHeader("Company");
 
-	grid.getColumns().forEach(col -> col.setAutoWidth(true));
+	grid.getColumns().forEach(contactColumn -> contactColumn.setAutoWidth(true));
 
 	grid.asSingleSelect().addValueChangeListener(evt -> editContact(evt.getValue()));
   }
@@ -143,7 +147,7 @@ class MainView extends VerticalLayout {
   }
 
   private void closeEditor() {
-	form.setContact(null);
+//	form.setContact(null);
 	form.setVisible(false);
 	removeClassName("editing");
   }
@@ -151,7 +155,6 @@ class MainView extends VerticalLayout {
   private void updateList() {
 	grid.setItems(contactService.findAll(filterText.getValue()));
   }
-
 }
 
 class ContactForm extends FormLayout {
@@ -172,17 +175,19 @@ class ContactForm extends FormLayout {
   public ContactForm(List<Company> companies) {
 	addClassName("contact-form");
 
-	binder.bindInstanceFields(this);
+//	binder.bindInstanceFields(this);
 	status.setItems(Contact.Status.values());
 	company.setItems(companies);
 	company.setItemLabelGenerator(Company::getName);
 
-	add(firstName, lastName, email, status, company, createButtonsLayout()
-	);
+	add(firstName, lastName, email, status, company, createButtonsLayout());
   }
 
   public void setContact(Contact contact) {
 	this.contact = contact;
+
+
+
 	binder.readBean(contact);
   }
 
@@ -214,7 +219,7 @@ class ContactForm extends FormLayout {
 
   // Events
   public static abstract class ContactFormEvent extends ComponentEvent<ContactForm> {
-	private Contact contact;
+	private final Contact contact;
 
 	protected ContactFormEvent(ContactForm source, Contact contact) {
 	  super(source, false);
@@ -281,8 +286,6 @@ abstract class AbstractEntity {
 	return id != null;
   }
 
-  public AbstractEntity(){}
-
   @Override
   public int hashCode() {
 	if (getId() != null) {
@@ -337,8 +340,6 @@ class Contact extends AbstractEntity implements Cloneable {
 //  @NotNull
 //  @NotEmpty
   private String email = "";
-
-  public Contact(){}
 
   public String getEmail() {
 	return email;
@@ -441,15 +442,23 @@ class CompanyService {
 	return companyRepository.findAll();
   }
 
+  public Map<String, Integer> getStats() {
+	HashMap<String, Integer> stats = new HashMap<>();
+	findAll().forEach(company ->
+		  stats.put(company.getName(), company.getEmployees().size()));
+	return stats;
+  }
 }
 
 @Log
 @Service
 class ContactService {
+  private static final Logger LOGGER = Logger.getLogger(ContactService.class.getName());
   private final ContactRepository contactRepository;
   private final CompanyRepository companyRepository;
 
-  ContactService(ContactRepository contactRepository, CompanyRepository companyRepository) {
+  public ContactService(ContactRepository contactRepository,
+						CompanyRepository companyRepository) {
 	this.contactRepository = contactRepository;
 	this.companyRepository = companyRepository;
   }
@@ -476,7 +485,8 @@ class ContactService {
 
   public void save(Contact contact) {
 	if (contact == null) {
-	  log(Level.SEVERE, "Contact is null. Are you sure you have connected your form to the application?");
+	  LOGGER.log(Level.SEVERE,
+			"Contact is null. Are you sure you have connected your form to the application?");
 	  return;
 	}
 	contactRepository.save(contact);
@@ -484,7 +494,6 @@ class ContactService {
 
   @PostConstruct
   public void populateTestData() {
-
 	if (companyRepository.count() == 0) {
 	  companyRepository.saveAll(
 			Stream.of("Path-Way Electronics", "E-Tech Management", "Path-E-Tech Management")
