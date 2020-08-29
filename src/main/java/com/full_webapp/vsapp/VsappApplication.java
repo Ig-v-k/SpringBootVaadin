@@ -186,7 +186,25 @@ class ContactForm extends FormLayout {
   public void setContact(Contact contact) {
 	this.contact = contact;
 
+	binder
+		  .forField(firstName)
+		  .bind(Contact::getFirstName, Contact::setFirstName);
 
+	binder
+		  .forField(lastName)
+		  .bind(Contact::getLastName, Contact::setLastName);
+
+	binder
+		  .forField(email)
+		  .bind(Contact::getEmail, Contact::setEmail);
+
+	binder
+		  .forField(status)
+		  .bind(Contact::getStatus, Contact::setStatus);
+
+	binder
+		  .forField(company)
+		  .bind(Contact::getCompany, Contact::setCompany);
 
 	binder.readBean(contact);
   }
